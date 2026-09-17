@@ -1,0 +1,254 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Usuario (tabla base con herencia por discriminador: rol = "ADMIN" | "CLIENTE")
+// Los valores permitidos de "rol" y "estado" se validan en la capa de aplicacion (Zod),
+// no como enum de base de datos, para mantenerlos como String segun lo solicitado.
+// ─────────────────────────────────────────────
+model Usuario {
+  idUsuario      Int    @id @default(autoincrement()) @map("id_usuario")
+  nombreCompleto String @map("nombre_completo")
+  correo         String @unique @map("correo")
+  passwordHash   String @map("password_hash")
+  rol            String @map("rol")
+  idIdioma       Int    @map("id_idioma")
+
+  // Exclusivos de ADMIN
+  cargo String? @map("cargo")
+
+  // Exclusivos de CLIENTE
+  direccion String? @map("direccion")
+  telefono  String? @map("telefono")
+
+  idioma Idioma @relation(fields: [idIdioma], references: [idIdioma])
+
+  carrito              Carrito?
+  ventas               Venta[]
+  solicitudesServicio  SolicitudServicio[]
+  notificaciones       Notificacion[]
+  presets              Preset[]
+  favoritos            Favorito[]
+  passwordResetTokens  PasswordResetToken[]
+
+  @@map("usuarios")
+}
+
+model Idioma {
+  idIdioma Int    @id @default(autoincrement()) @map("id_idioma")
+  codigo   String @map("codigo")
+  nombre   String @map("nombre")
+
+  usuarios     Usuario[]
+  traducciones TraduccionProducto[]
+
+  @@map("idiomas")
+}
+
+model Categoria {
+  idCategoria Int    @id @default(autoincrement()) @map("id_categoria")
+  nombre      String @map("nombre")
+  tipo        String @map("tipo")
+
+  productos Producto[]
+
+  @@map("categorias")
+}
+
+model Producto {
+  idProducto  Int     @id @default(autoincrement()) @map("id_producto")
+  idCategoria Int     @map("id_categoria")
+  nombre      String  @map("nombre")
+  marca       String  @map("marca")
+  precio      Decimal @db.Decimal(10, 2) @map("precio")
+  stock       Int     @map("stock")
+
+  categoria Categoria @relation(fields: [idCategoria], references: [idCategoria])
+
+  componentePC  ComponentePC?
+  itemsCarrito  ItemCarrito[]
+  detallesVenta DetalleVenta[]
+  favoritos     Favorito[]
+  traducciones  TraduccionProducto[]
+
+  @@map("productos")
+}
+
+// Hereda de Producto via relacion 1 a 1 (idProducto es PK y FK a la vez)
+model ComponentePC {
+  idProducto      Int    @id @map("id_producto")
+  tipoComponente  String @map("tipo_componente")
+  socket          String @map("socket")
+  wattsRequeridos Int    @map("watts_requeridos")
+
+  producto Producto @relation(fields: [idProducto], references: [idProducto], onDelete: Cascade)
+
+  componentesPreset ComponentePreset[]
+
+  @@map("componentes_pc")
+}
+
+model TraduccionProducto {
+  idTraduccion         Int    @id @default(autoincrement()) @map("id_traduccion")
+  idProducto           Int    @map("id_producto")
+  idIdioma             Int    @map("id_idioma")
+  nombreTraducido      String @map("nombre_traducido")
+  descripcionTraducida String @map("descripcion_traducida")
+
+  producto Producto @relation(fields: [idProducto], references: [idProducto], onDelete: Cascade)
+  idioma   Idioma   @relation(fields: [idIdioma], references: [idIdioma])
+
+  @@unique([idProducto, idIdioma])
+  @@map("traducciones_producto")
+}
+
+model Carrito {
+  idCarrito Int      @id @default(autoincrement()) @map("id_carrito")
+  idUsuario Int      @unique @map("id_usuario")
+  fecha     DateTime @default(now()) @map("fecha")
+
+  usuario Usuario       @relation(fields: [idUsuario], references: [idUsuario])
+  items   ItemCarrito[]
+
+  @@map("carritos")
+}
+
+model ItemCarrito {
+  idItemCarrito Int @id @default(autoincrement()) @map("id_item_carrito")
+  idCarrito     Int @map("id_carrito")
+  idProducto    Int @map("id_producto")
+  cantidad      Int @map("cantidad")
+
+  carrito  Carrito  @relation(fields: [idCarrito], references: [idCarrito], onDelete: Cascade)
+  producto Producto @relation(fields: [idProducto], references: [idProducto])
+
+  @@unique([idCarrito, idProducto])
+  @@map("items_carrito")
+}
+
+model Venta {
+  idVenta   Int      @id @default(autoincrement()) @map("id_venta")
+  idUsuario Int      @map("id_usuario")
+  fecha     DateTime @default(now()) @map("fecha")
+  total     Decimal  @db.Decimal(10, 2) @map("total")
+  estado    String   @default("PENDIENTE") @map("estado")
+
+  usuario  Usuario        @relation(fields: [idUsuario], references: [idUsuario])
+  detalles DetalleVenta[]
+  factura  Factura?
+
+  @@map("ventas")
+}
+
+model DetalleVenta {
+  idDetalleVenta Int     @id @default(autoincrement()) @map("id_detalle_venta")
+  idVenta        Int     @map("id_venta")
+  idProducto     Int     @map("id_producto")
+  cantidad       Int     @map("cantidad")
+  precioUnitario Decimal @db.Decimal(10, 2) @map("precio_unitario")
+
+  venta    Venta    @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
+  producto Producto @relation(fields: [idProducto], references: [idProducto])
+
+  @@map("detalles_venta")
+}
+
+model Factura {
+  idFactura     Int      @id @default(autoincrement()) @map("id_factura")
+  idVenta       Int      @unique @map("id_venta")
+  numeroFactura String   @unique @map("numero_factura")
+  urlPdf        String   @map("url_pdf")
+  fechaEmision  DateTime @default(now()) @map("fecha_emision")
+
+  venta Venta @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
+
+  @@map("facturas")
+}
+
+model SolicitudServicio {
+  idSolicitud   Int      @id @default(autoincrement()) @map("id_solicitud")
+  idUsuario     Int      @map("id_usuario")
+  descripcion   String   @map("descripcion")
+  diagnosticoIA String?  @map("diagnostico_ia")
+  estado        String   @default("PENDIENTE") @map("estado")
+  fecha         DateTime @default(now()) @map("fecha")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario])
+
+  @@map("solicitudes_servicio")
+}
+
+// Relacion polimorfica: tipoOrigen indica la entidad relacionada (ej. "VENTA", "SOLICITUD_SERVICIO"),
+// idOrigen es su id. No lleva FK real porque puede apuntar a distintas tablas.
+model Notificacion {
+  idNotificacion Int      @id @default(autoincrement()) @map("id_notificacion")
+  idUsuario      Int      @map("id_usuario")
+  tipoOrigen     String   @map("tipo_origen")
+  idOrigen       Int      @map("id_origen")
+  mensaje        String   @map("mensaje")
+  leida          Boolean  @default(false) @map("leida")
+  fecha          DateTime @default(now()) @map("fecha")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario])
+
+  @@map("notificaciones")
+}
+
+model Preset {
+  idPreset      Int    @id @default(autoincrement()) @map("id_preset")
+  idUsuario     Int    @map("id_usuario")
+  nombre        String @map("nombre")
+  potenciaWatts Int    @map("potencia_watts")
+
+  usuario     Usuario            @relation(fields: [idUsuario], references: [idUsuario])
+  componentes ComponentePreset[]
+
+  @@map("presets")
+}
+
+// Tabla intermedia muchos a muchos entre Preset y ComponentePC
+model ComponentePreset {
+  idComponentePreset Int @id @default(autoincrement()) @map("id_componente_preset")
+  idPreset           Int @map("id_preset")
+  idProducto         Int @map("id_producto")
+
+  preset       Preset       @relation(fields: [idPreset], references: [idPreset], onDelete: Cascade)
+  componentePC ComponentePC @relation(fields: [idProducto], references: [idProducto])
+
+  @@unique([idPreset, idProducto])
+  @@map("componentes_preset")
+}
+
+model Favorito {
+  idFavorito    Int      @id @default(autoincrement()) @map("id_favorito")
+  idUsuario     Int      @map("id_usuario")
+  idProducto    Int      @map("id_producto")
+  fechaAgregado DateTime @default(now()) @map("fecha_agregado")
+
+  usuario  Usuario  @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  producto Producto @relation(fields: [idProducto], references: [idProducto], onDelete: Cascade)
+
+  @@unique([idUsuario, idProducto])
+  @@map("favoritos")
+}
+
+// No pedido explicitamente en el modelo original, pero necesario para "recuperacion de
+// contrasena" sin servicio de email: guarda el hash del token de reseteo y su expiracion.
+model PasswordResetToken {
+  idToken   Int      @id @default(autoincrement()) @map("id_token")
+  idUsuario Int      @map("id_usuario")
+  tokenHash String   @unique @map("token_hash")
+  expiraEn  DateTime @map("expira_en")
+  usado     Boolean  @default(false) @map("usado")
+  creadoEn  DateTime @default(now()) @map("creado_en")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
