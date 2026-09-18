@@ -1,6 +1,8 @@
-require('dotenv').config();
-const bcrypt = require('bcryptjs');
-const prisma = require('../src/prisma/client');
+import 'dotenv/config';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient();
 
 async function main() {
   const espanol = await prisma.idioma.upsert({
