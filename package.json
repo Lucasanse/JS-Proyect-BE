@@ -4,16 +4,14 @@
   "main": "src/server.ts",
   "type": "commonjs",
   "scripts": {
-    "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "prisma:generate": "prisma generate",
+    "start": "node dist/src/server.js",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "docker:down": "docker compose down"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",
@@ -27,7 +25,10 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.6.1",
     "prisma": "^6.16.0",
     "tsx": "^4.23.13",

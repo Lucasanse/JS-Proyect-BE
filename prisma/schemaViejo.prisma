@@ -29,22 +29,21 @@ model Usuario {
 
   idioma Idioma @relation(fields: [idIdioma], references: [idIdioma])
 
-  carrito             Carrito?
-  ventas              Venta[]
-  solicitudesServicio SolicitudServicio[]
-  notificaciones      Notificacion[]
-  presets             Preset[]
-  favoritos           Favorito[]
-  passwordResetTokens PasswordResetToken[]
+  carrito              Carrito?
+  ventas               Venta[]
+  solicitudesServicio  SolicitudServicio[]
+  notificaciones       Notificacion[]
+  presets              Preset[]
+  favoritos            Favorito[]
+  passwordResetTokens  PasswordResetToken[]
 
   @@map("usuarios")
 }
 
 model Idioma {
-  idIdioma Int     @id @default(autoincrement()) @map("id_idioma")
-  codigo   String  @unique @map("codigo")
-  nombre   String  @map("nombre")
-  activo   Boolean @default(true) @map("activo")
+  idIdioma Int    @id @default(autoincrement()) @map("id_idioma")
+  codigo   String @map("codigo")
+  nombre   String @map("nombre")
 
   usuarios     Usuario[]
   traducciones TraduccionProducto[]
@@ -52,11 +51,10 @@ model Idioma {
   @@map("idiomas")
 }
 
-// Categoria solo organiza el catalogo. El tipo tecnico de un componente
-// (CPU, GPU, RAM...) vive en TipoComponente.
 model Categoria {
   idCategoria Int    @id @default(autoincrement()) @map("id_categoria")
-  nombre      String @unique @map("nombre")
+  nombre      String @map("nombre")
+  tipo        String @map("tipo")
 
   productos Producto[]
 
@@ -67,9 +65,8 @@ model Producto {
   idProducto  Int     @id @default(autoincrement()) @map("id_producto")
   idCategoria Int     @map("id_categoria")
   nombre      String  @map("nombre")
-  descripcion String  @map("descripcion") // texto en el idioma base (espanol)
   marca       String  @map("marca")
-  precio      Decimal @map("precio") @db.Decimal(10, 2)
+  precio      Decimal @db.Decimal(10, 2) @map("precio")
   stock       Int     @map("stock")
 
   categoria Categoria @relation(fields: [idCategoria], references: [idCategoria])
@@ -83,65 +80,22 @@ model Producto {
   @@map("productos")
 }
 
-// Especializacion de Producto: idProducto es PK y FK a la vez, asi un
-// componente no repite nombre, precio ni stock.
-// wattsRequeridos queda fijo porque se usa para calcular Preset.potenciaWatts;
-// el resto de los atributos tecnicos va en ValorAtributo.
+// Hereda de Producto via relacion 1 a 1 (idProducto es PK y FK a la vez)
 model ComponentePC {
-  idProducto       Int @id @map("id_producto")
-  idTipoComponente Int @map("id_tipo_componente")
-  wattsRequeridos  Int @map("watts_requeridos")
+  idProducto      Int    @id @map("id_producto")
+  tipoComponente  String @map("tipo_componente")
+  socket          String @map("socket")
+  wattsRequeridos Int    @map("watts_requeridos")
 
-  producto       Producto       @relation(fields: [idProducto], references: [idProducto], onDelete: Cascade)
-  tipoComponente TipoComponente @relation(fields: [idTipoComponente], references: [idTipoComponente])
+  producto Producto @relation(fields: [idProducto], references: [idProducto], onDelete: Cascade)
 
-  valoresAtributo   ValorAtributo[]
   componentesPreset ComponentePreset[]
 
   @@map("componentes_pc")
 }
 
-// CPU, GPU, RAM, Fuente, etc.
-model TipoComponente {
-  idTipoComponente Int    @id @default(autoincrement()) @map("id_tipo_componente")
-  nombre           String @unique @map("nombre")
-
-  componentes ComponentePC[]
-  atributos   AtributoTecnico[]
-
-  @@map("tipos_componente")
-}
-
-// Que atributos tiene cada tipo de componente (socket, frecuencia, capacidad...)
-model AtributoTecnico {
-  idAtributo       Int     @id @default(autoincrement()) @map("id_atributo")
-  idTipoComponente Int     @map("id_tipo_componente")
-  nombre           String  @map("nombre")
-  unidad           String? @map("unidad") // null si no tiene unidad (ej. socket)
-
-  tipoComponente TipoComponente  @relation(fields: [idTipoComponente], references: [idTipoComponente])
-  valores        ValorAtributo[]
-
-  @@unique([idTipoComponente, nombre])
-  @@map("atributos_tecnicos")
-}
-
-// Valor de un atributo tecnico para un componente puntual
-model ValorAtributo {
-  idProducto Int    @map("id_producto")
-  idAtributo Int    @map("id_atributo")
-  valor      String @map("valor")
-
-  componentePC ComponentePC    @relation(fields: [idProducto], references: [idProducto], onDelete: Cascade)
-  atributo     AtributoTecnico @relation(fields: [idAtributo], references: [idAtributo])
-
-  @@id([idProducto, idAtributo])
-  @@map("valores_atributo")
-}
-
-// PK compuesta: impide traducciones duplicadas y sirve de indice para
-// buscar un producto en un idioma.
 model TraduccionProducto {
+  idTraduccion         Int    @id @default(autoincrement()) @map("id_traduccion")
   idProducto           Int    @map("id_producto")
   idIdioma             Int    @map("id_idioma")
   nombreTraducido      String @map("nombre_traducido")
@@ -150,7 +104,7 @@ model TraduccionProducto {
   producto Producto @relation(fields: [idProducto], references: [idProducto], onDelete: Cascade)
   idioma   Idioma   @relation(fields: [idIdioma], references: [idIdioma])
 
-  @@id([idProducto, idIdioma])
+  @@unique([idProducto, idIdioma])
   @@map("traducciones_producto")
 }
 
@@ -182,13 +136,12 @@ model Venta {
   idVenta   Int      @id @default(autoincrement()) @map("id_venta")
   idUsuario Int      @map("id_usuario")
   fecha     DateTime @default(now()) @map("fecha")
-  total     Decimal  @map("total") @db.Decimal(10, 2)
+  total     Decimal  @db.Decimal(10, 2) @map("total")
   estado    String   @default("PENDIENTE") @map("estado")
 
-  usuario        Usuario        @relation(fields: [idUsuario], references: [idUsuario])
-  detalles       DetalleVenta[]
-  factura        Factura?
-  notificaciones Notificacion[]
+  usuario  Usuario        @relation(fields: [idUsuario], references: [idUsuario])
+  detalles DetalleVenta[]
+  factura  Factura?
 
   @@map("ventas")
 }
@@ -198,7 +151,7 @@ model DetalleVenta {
   idVenta        Int     @map("id_venta")
   idProducto     Int     @map("id_producto")
   cantidad       Int     @map("cantidad")
-  precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2)
+  precioUnitario Decimal @db.Decimal(10, 2) @map("precio_unitario")
 
   venta    Venta    @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
   producto Producto @relation(fields: [idProducto], references: [idProducto])
@@ -226,39 +179,23 @@ model SolicitudServicio {
   estado        String   @default("PENDIENTE") @map("estado")
   fecha         DateTime @default(now()) @map("fecha")
 
-  usuario        Usuario        @relation(fields: [idUsuario], references: [idUsuario])
-  notificaciones Notificacion[]
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario])
 
   @@map("solicitudes_servicio")
 }
 
-// Codigo y plantilla del mensaje de cada tipo de notificacion
-model TipoNotificacion {
-  idTipoNotificacion Int    @id @default(autoincrement()) @map("id_tipo_notificacion")
-  codigo             String @unique @map("codigo")
-  plantillaMensaje   String @map("plantilla_mensaje")
-
-  notificaciones Notificacion[]
-
-  @@map("tipos_notificacion")
-}
-
-// FKs reales y opcionales al origen de la notificacion. Un CHECK en la
-// migracion obliga a que exactamente una de las dos (idVenta / idSolicitud)
-// este cargada. Si aparece otro origen, se agrega su FK explicitamente.
+// Relacion polimorfica: tipoOrigen indica la entidad relacionada (ej. "VENTA", "SOLICITUD_SERVICIO"),
+// idOrigen es su id. No lleva FK real porque puede apuntar a distintas tablas.
 model Notificacion {
-  idNotificacion     Int      @id @default(autoincrement()) @map("id_notificacion")
-  idUsuario          Int      @map("id_usuario")
-  idTipoNotificacion Int      @map("id_tipo_notificacion")
-  idVenta            Int?     @map("id_venta")
-  idSolicitud        Int?     @map("id_solicitud")
-  leida              Boolean  @default(false) @map("leida")
-  fecha              DateTime @default(now()) @map("fecha")
+  idNotificacion Int      @id @default(autoincrement()) @map("id_notificacion")
+  idUsuario      Int      @map("id_usuario")
+  tipoOrigen     String   @map("tipo_origen")
+  idOrigen       Int      @map("id_origen")
+  mensaje        String   @map("mensaje")
+  leida          Boolean  @default(false) @map("leida")
+  fecha          DateTime @default(now()) @map("fecha")
 
-  usuario          Usuario            @relation(fields: [idUsuario], references: [idUsuario])
-  tipoNotificacion TipoNotificacion   @relation(fields: [idTipoNotificacion], references: [idTipoNotificacion])
-  venta            Venta?             @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
-  solicitud        SolicitudServicio? @relation(fields: [idSolicitud], references: [idSolicitud], onDelete: Cascade)
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario])
 
   @@map("notificaciones")
 }
@@ -275,17 +212,16 @@ model Preset {
   @@map("presets")
 }
 
-// Tabla intermedia muchos a muchos entre Preset y ComponentePC.
-// cantidad permite, por ejemplo, 2 modulos de RAM iguales en un mismo preset.
+// Tabla intermedia muchos a muchos entre Preset y ComponentePC
 model ComponentePreset {
-  idPreset   Int @map("id_preset")
-  idProducto Int @map("id_producto")
-  cantidad   Int @default(1) @map("cantidad")
+  idComponentePreset Int @id @default(autoincrement()) @map("id_componente_preset")
+  idPreset           Int @map("id_preset")
+  idProducto         Int @map("id_producto")
 
   preset       Preset       @relation(fields: [idPreset], references: [idPreset], onDelete: Cascade)
   componentePC ComponentePC @relation(fields: [idProducto], references: [idProducto])
 
-  @@id([idPreset, idProducto])
+  @@unique([idPreset, idProducto])
   @@map("componentes_preset")
 }
 
