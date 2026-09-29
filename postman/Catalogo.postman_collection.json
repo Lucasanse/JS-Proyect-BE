@@ -1,0 +1,856 @@
+{
+  "info": {
+    "name": "Catalogo de productos",
+    "description": "Pruebas de los endpoints del catalogo: listado paginado, filtros, detalle, categorias y marcas.\n\nAntes de correrla: base cargada con el seed (npx prisma migrate reset) y servidor levantado (npm run dev).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "host",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "baseUrl",
+      "value": "{{host}}/api"
+    },
+    {
+      "key": "idComponente",
+      "value": ""
+    },
+    {
+      "key": "idNoComponente",
+      "value": ""
+    },
+    {
+      "key": "idSinStock",
+      "value": ""
+    },
+    {
+      "key": "idCategoriaInsumos",
+      "value": ""
+    },
+    {
+      "key": "idCategoriaPerifericos",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Test comun a todas las requests",
+          "pm.test('Responde JSON', () => pm.response.to.be.json);"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Health",
+      "request": {
+        "method": "GET",
+        "url": "{{host}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "{",
+              "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "  pm.test('status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Filtros",
+      "item": [
+        {
+          "name": "Listar categorias",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/categorias"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Devuelve un array con id, nombre y cantidadProductos', () => {",
+                  "    pm.expect(body).to.be.an('array').that.is.not.empty;",
+                  "    body.forEach((c) => pm.expect(c).to.have.all.keys('id', 'nombre', 'cantidadProductos'));",
+                  "  });",
+                  "  pm.test('Incluye Computadoras, Insumos y Perifericos', () => {",
+                  "    const nombres = body.map((c) => c.nombre);",
+                  "    pm.expect(nombres).to.include.members(['Computadoras', 'Insumos', 'Perifericos']);",
+                  "  });",
+                  "",
+                  "  // Guarda ids para las pruebas de filtros",
+                  "  pm.collectionVariables.set('idCategoriaInsumos', body.find((c) => c.nombre === 'Insumos').id);",
+                  "  pm.collectionVariables.set('idCategoriaPerifericos', body.find((c) => c.nombre === 'Perifericos').id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar marcas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/marcas"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Devuelve marcas con nombre y cantidadProductos', () => {",
+                  "    pm.expect(body).to.be.an('array').that.is.not.empty;",
+                  "    body.forEach((m) => pm.expect(m).to.have.all.keys('nombre', 'cantidadProductos'));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar marcas de una categoria",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/marcas?categoria={{idCategoriaPerifericos}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "marcas"
+              ],
+              "query": [
+                {
+                  "key": "categoria",
+                  "value": "{{idCategoriaPerifericos}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Solo marcas de perifericos (incluye Logitech, no AMD)', () => {",
+                  "    const nombres = body.map((m) => m.nombre);",
+                  "    pm.expect(nombres).to.include('Logitech');",
+                  "    pm.expect(nombres).to.not.include('AMD');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Listado de productos",
+      "item": [
+        {
+          "name": "Listar productos (por defecto)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/productos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Tiene data y paginacion', () => pm.expect(body).to.have.all.keys('data', 'paginacion'));",
+                  "  pm.test('Pagina 1 con limit 12 por defecto', () => {",
+                  "    pm.expect(body.paginacion.page).to.eql(1);",
+                  "    pm.expect(body.paginacion.limit).to.eql(12);",
+                  "    pm.expect(body.data.length).to.be.at.most(12);",
+                  "    pm.expect(body.paginacion.hasPrev).to.eql(false);",
+                  "  });",
+                  "  pm.test('Cada producto tiene la forma esperada', () => {",
+                  "    body.data.forEach((p) => {",
+                  "      pm.expect(p).to.include.keys('id', 'nombre', 'descripcion', 'marca', 'precio', 'stock', 'disponible', 'categoria', 'esComponentePC', 'tipoComponente');",
+                  "      pm.expect(p.precio).to.be.a('number');",
+                  "      pm.expect(p.disponible).to.eql(p.stock > 0);",
+                  "    });",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar todos (limit 50) y guardar ids de prueba",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const { data } = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "  const componente = data.find((p) => p.esComponentePC && p.stock > 0);",
+                  "  const noComponente = data.find((p) => !p.esComponentePC);",
+                  "  const sinStock = data.find((p) => p.stock === 0);",
+                  "",
+                  "  pm.test('Hay componentes de PC, otros productos y al menos uno sin stock', () => {",
+                  "    pm.expect(componente, 'componente').to.exist;",
+                  "    pm.expect(noComponente, 'no componente').to.exist;",
+                  "    pm.expect(sinStock, 'sin stock').to.exist;",
+                  "  });",
+                  "",
+                  "  // Se usan en las pruebas de detalle",
+                  "  pm.collectionVariables.set('idComponente', componente.id);",
+                  "  pm.collectionVariables.set('idNoComponente', noComponente.id);",
+                  "  pm.collectionVariables.set('idSinStock', sinStock.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Paginacion (page 2, limit 5)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?page=2&limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const { data, paginacion } = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Devuelve la pagina 2 con 5 productos', () => {",
+                  "    pm.expect(paginacion.page).to.eql(2);",
+                  "    pm.expect(data.length).to.eql(5);",
+                  "    pm.expect(paginacion.hasPrev).to.eql(true);",
+                  "    pm.expect(paginacion.totalPages).to.eql(Math.ceil(paginacion.total / 5));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagina fuera de rango (page 99)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?page=99",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "99"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const { data, paginacion } = pm.response.json();",
+                  "  pm.test('Status 200 con data vacia', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(data).to.be.empty;",
+                  "    pm.expect(paginacion.hasNext).to.eql(false);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Busqueda y filtros",
+      "item": [
+        {
+          "name": "Filtrar por categoria (Insumos)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?categoria={{idCategoriaInsumos}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "categoria",
+                  "value": "{{idCategoriaInsumos}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const { data } = pm.response.json();",
+                  "  const idCategoria = Number(pm.collectionVariables.get('idCategoriaInsumos'));",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Todos son de la categoria Insumos', () => {",
+                  "    pm.expect(data).to.not.be.empty;",
+                  "    data.forEach((p) => pm.expect(p.categoria.id).to.eql(idCategoria));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filtrar por marca (sin importar mayusculas)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?marca=logitech",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "marca",
+                  "value": "logitech"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const { data } = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Todos son marca Logitech', () => {",
+                  "    pm.expect(data).to.not.be.empty;",
+                  "    data.forEach((p) => pm.expect(p.marca).to.eql('Logitech'));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filtrar por rango de precio",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?precioMin=100000&precioMax=300000&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "precioMin",
+                  "value": "100000"
+                },
+                {
+                  "key": "precioMax",
+                  "value": "300000"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const { data } = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Todos los precios estan entre 100000 y 300000', () => {",
+                  "    pm.expect(data).to.not.be.empty;",
+                  "    data.forEach((p) => pm.expect(p.precio).to.be.within(100000, 300000));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filtros combinados (categoria + marca + solo con stock)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?categoria={{idCategoriaPerifericos}}&marca=Logitech&soloConStock=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "categoria",
+                  "value": "{{idCategoriaPerifericos}}"
+                },
+                {
+                  "key": "marca",
+                  "value": "Logitech"
+                },
+                {
+                  "key": "soloConStock",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const { data } = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Todos Logitech, perifericos y con stock', () => {",
+                  "    pm.expect(data).to.not.be.empty;",
+                  "    data.forEach((p) => {",
+                  "      pm.expect(p.marca).to.eql('Logitech');",
+                  "      pm.expect(p.categoria.nombre).to.eql('Perifericos');",
+                  "      pm.expect(p.disponible).to.eql(true);",
+                  "    });",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Busqueda por texto (q=rtx)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?q=rtx",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "rtx"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const { data } = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Todos mencionan RTX en nombre, descripcion o marca', () => {",
+                  "    pm.expect(data).to.not.be.empty;",
+                  "    data.forEach((p) => pm.expect(`${p.nombre} ${p.descripcion} ${p.marca}`.toLowerCase()).to.include('rtx'));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ordenar por precio descendente",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?orden=precio_desc&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "orden",
+                  "value": "precio_desc"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const precios = pm.response.json().data.map((p) => p.precio);",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Precios ordenados de mayor a menor', () => {",
+                  "    const ordenados = [...precios].sort((a, b) => b - a);",
+                  "    pm.expect(precios).to.eql(ordenados);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Detalle de producto",
+      "item": [
+        {
+          "name": "Detalle de componente de PC (con specs)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/productos/{{idComponente}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const p = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Es componente y trae specs', () => {",
+                  "    pm.expect(p.esComponentePC).to.eql(true);",
+                  "    pm.expect(p.componentePC).to.include.keys('tipo', 'wattsRequeridos', 'atributos');",
+                  "    pm.expect(p.componentePC.atributos).to.be.an('array').that.is.not.empty;",
+                  "    p.componentePC.atributos.forEach((a) => pm.expect(a).to.have.all.keys('nombre', 'valor', 'unidad'));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle de producto que no es componente",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/productos/{{idNoComponente}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const p = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('componentePC es null', () => {",
+                  "    pm.expect(p.esComponentePC).to.eql(false);",
+                  "    pm.expect(p.componentePC).to.eql(null);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle de producto sin stock",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/productos/{{idSinStock}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const p = pm.response.json();",
+                  "  pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('stock 0 y no disponible', () => {",
+                  "    pm.expect(p.stock).to.eql(0);",
+                  "    pm.expect(p.disponible).to.eql(false);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Errores",
+      "item": [
+        {
+          "name": "404 - Producto inexistente",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/productos/9999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "  pm.test('Mensaje claro', () => pm.expect(pm.response.json().error).to.eql('Producto con id 9999 no encontrado'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 - Id invalido",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/productos/abc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "  pm.test('Detalle apunta al campo id', () => {",
+                  "    pm.expect(body.error).to.eql('Datos invalidos');",
+                  "    pm.expect(body.detalles[0].path).to.eql(['id']);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 - precioMin mayor que precioMax",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?precioMin=500000&precioMax=100000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "precioMin",
+                  "value": "500000"
+                },
+                {
+                  "key": "precioMax",
+                  "value": "100000"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "  pm.test('Mensaje de rango invalido', () => pm.expect(body.detalles[0].message).to.eql('precioMin no puede ser mayor que precioMax'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 - limit mayor al maximo (500)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?limit=500",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "500"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "  pm.test('Detalle apunta al campo limit', () => pm.expect(pm.response.json().detalles[0].path).to.eql(['limit']));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 - orden invalido",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos?orden=barato",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "orden",
+                  "value": "barato"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "  pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "  pm.test('Detalle apunta al campo orden', () => pm.expect(pm.response.json().detalles[0].path).to.eql(['orden']));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
