@@ -71,6 +71,7 @@ model Producto {
   marca       String  @map("marca")
   precio      Decimal @map("precio") @db.Decimal(10, 2)
   stock       Int     @map("stock")
+  imagenUrl   String? @map("imagen_url")
 
   categoria Categoria @relation(fields: [idCategoria], references: [idCategoria])
 
