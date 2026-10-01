@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { errorHandler } from './middlewares/errorHandler';
+import { apiRouter } from './routes';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -19,7 +20,7 @@ app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Aca se agregan las rutas de la API.
+app.use('/api', apiRouter);
 
 app.use(errorHandler);
 
