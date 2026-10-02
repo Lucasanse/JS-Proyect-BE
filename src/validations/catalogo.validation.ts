@@ -21,3 +21,9 @@ export const listarProductosQuerySchema = z
   });
 
 export type ListarProductosQuery = z.infer<typeof listarProductosQuerySchema>;
+
+// GET /api/marcas
+// Si viene la categoria, solo se devuelven las marcas que tienen productos en ella.
+export const listarMarcasQuerySchema = z.object({
+  categoria: z.coerce.number().int().min(1).optional(),
+});
