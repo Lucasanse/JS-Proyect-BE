@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { includeResumen, mapearResumen } from '../utils/producto.mapper';
 import type { Paginado, ProductoResumen } from '../utils/catalogo.types';
-import { listarProductosQuerySchema } from '../validations/catalogo.validation';
+import { listarMarcasQuerySchema, listarProductosQuerySchema } from '../validations/catalogo.validation';
 
 // Express 5 pasa al errorHandler los errores de funciones async
 // (ZodError -> 400, AppError -> su status).
@@ -38,9 +38,12 @@ export async function listarProductos(req: Request, res: Response<Paginado<Produ
   });
 }
 
-// GET /api/marcas
-export async function listarMarcas(_req: Request, res: Response<string[]>) {
+// GET /api/marcas?categoria=
+export async function listarMarcas(req: Request, res: Response<string[]>) {
+  const { categoria } = listarMarcasQuerySchema.parse(req.query);
+
   const marcas = await prisma.producto.findMany({
+    where: { idCategoria: categoria },
     distinct: ['marca'],
     select: { marca: true },
     orderBy: { marca: 'asc' },
