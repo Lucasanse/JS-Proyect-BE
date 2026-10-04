@@ -13,17 +13,12 @@ datasource db {
 // no como enum de base de datos, para mantenerlos como String segun lo solicitado.
 // ─────────────────────────────────────────────
 model Usuario {
-  id     Int      @id @default(autoincrement()) @map("id_usuario")
-  nombreCompleto String   @map("nombre_completo")
-  correo         String   @unique @map("correo")
-  rol            String   @default("CLIENTE") @map("rol")
-  idIdioma       Int      @default(1) @map("id_idioma")
-
-  // Campos requeridos por Better Auth
-  correoVerificado Boolean  @default(false) @map("correo_verificado")
-  imagen           String?  @map("imagen")
-  creadoEn         DateTime @default(now()) @map("creado_en")
-  actualizadoEn    DateTime @default(now()) @updatedAt @map("actualizado_en")
+  idUsuario      Int    @id @default(autoincrement()) @map("id_usuario")
+  nombreCompleto String @map("nombre_completo")
+  correo         String @unique @map("correo")
+  passwordHash   String @map("password_hash")
+  rol            String @map("rol")
+  idIdioma       Int    @map("id_idioma")
 
   // Exclusivos de ADMIN
   cargo String? @map("cargo")
@@ -34,7 +29,6 @@ model Usuario {
 
   idioma Idioma @relation(fields: [idIdioma], references: [idIdioma])
 
-
   carrito             Carrito?
   ventas              Venta[]
   solicitudesServicio SolicitudServicio[]
@@ -43,59 +37,9 @@ model Usuario {
   favoritos           Favorito[]
   passwordResetTokens PasswordResetToken[]
 
-  // Relaciones de Better Auth
-  sesiones Sesion[]
-  cuentas  Cuenta[]
-
   @@map("usuarios")
 }
 
-
-model Sesion {
-  id            Int      @id @default(autoincrement()) @map("id_sesion")
-  idUsuario     Int      @map("id_usuario")
-  token         String   @unique @map("token")
-  expiraEn      DateTime @map("expira_en")
-  ipAddress     String?  @map("ip_address")
-  userAgent     String?  @map("user_agent")
-  creadoEn      DateTime @default(now()) @map("creado_en")
-  actualizadoEn DateTime @updatedAt @map("actualizado_en")
-
-  usuario Usuario @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
-
-  @@map("sesiones")
-}
-
-model Cuenta {
-  id                    Int       @id @default(autoincrement()) @map("id_cuenta")
-  idUsuario             Int       @map("id_usuario")
-  accountId             String    @map("account_id")
-  providerId            String    @map("provider_id")
-  accessToken           String?   @map("access_token")
-  refreshToken          String?   @map("refresh_token")
-  idToken               String?   @map("id_token")
-  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
-  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
-  scope                 String?   @map("scope")
-  password              String?   @map("password") // Aquí guarda Better Auth el password hasheado
-  creadoEn              DateTime  @default(now()) @map("creado_en")
-  actualizadoEn         DateTime  @updatedAt @map("actualizado_en")
-
-  usuario Usuario @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
-
-  @@map("cuentas")
-}
-
-model Verificacion {
-  id            Int       @id @default(autoincrement()) @map("id_verificacion")
-  identificador String    @map("identificador")
-  valor         String    @map("valor")
-  expiraEn      DateTime  @map("expira_en")
-  creadoEn      DateTime? @default(now()) @map("creado_en")
-  actualizadoEn DateTime? @updatedAt @map("actualizado_en")
-
-  @@map("verificaciones")
-}
 model Idioma {
   idIdioma Int     @id @default(autoincrement()) @map("id_idioma")
   codigo   String  @unique @map("codigo")
@@ -216,7 +160,7 @@ model Carrito {
   idUsuario Int      @unique @map("id_usuario")
   fecha     DateTime @default(now()) @map("fecha")
 
-  usuario Usuario       @relation(fields: [idUsuario], references: [id])
+  usuario Usuario       @relation(fields: [idUsuario], references: [idUsuario])
   items   ItemCarrito[]
 
   @@map("carritos")
@@ -242,7 +186,7 @@ model Venta {
   total     Decimal  @map("total") @db.Decimal(10, 2)
   estado    String   @default("PENDIENTE") @map("estado")
 
-  usuario        Usuario        @relation(fields: [idUsuario], references: [id])
+  usuario        Usuario        @relation(fields: [idUsuario], references: [idUsuario])
   detalles       DetalleVenta[]
   factura        Factura?
   notificaciones Notificacion[]
@@ -283,7 +227,7 @@ model SolicitudServicio {
   estado        String   @default("PENDIENTE") @map("estado")
   fecha         DateTime @default(now()) @map("fecha")
 
-  usuario        Usuario        @relation(fields: [idUsuario], references: [id])
+  usuario        Usuario        @relation(fields: [idUsuario], references: [idUsuario])
   notificaciones Notificacion[]
 
   @@map("solicitudes_servicio")
@@ -312,7 +256,7 @@ model Notificacion {
   leida              Boolean  @default(false) @map("leida")
   fecha              DateTime @default(now()) @map("fecha")
 
-  usuario          Usuario            @relation(fields: [idUsuario], references: [id])
+  usuario          Usuario            @relation(fields: [idUsuario], references: [idUsuario])
   tipoNotificacion TipoNotificacion   @relation(fields: [idTipoNotificacion], references: [idTipoNotificacion])
   venta            Venta?             @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
   solicitud        SolicitudServicio? @relation(fields: [idSolicitud], references: [idSolicitud], onDelete: Cascade)
@@ -326,7 +270,7 @@ model Preset {
   nombre        String @map("nombre")
   potenciaWatts Int    @map("potencia_watts")
 
-  usuario     Usuario            @relation(fields: [idUsuario], references: [id])
+  usuario     Usuario            @relation(fields: [idUsuario], references: [idUsuario])
   componentes ComponentePreset[]
 
   @@map("presets")
@@ -352,7 +296,7 @@ model Favorito {
   idProducto    Int      @map("id_producto")
   fechaAgregado DateTime @default(now()) @map("fecha_agregado")
 
-  usuario  Usuario  @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
+  usuario  Usuario  @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
   producto Producto @relation(fields: [idProducto], references: [idProducto], onDelete: Cascade)
 
   @@unique([idUsuario, idProducto])
@@ -369,7 +313,7 @@ model PasswordResetToken {
   usado     Boolean  @default(false) @map("usado")
   creadoEn  DateTime @default(now()) @map("creado_en")
 
-  usuario Usuario @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
 
   @@map("password_reset_tokens")
 }
