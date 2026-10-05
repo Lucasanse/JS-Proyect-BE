@@ -6,7 +6,6 @@ import { auth } from "../lib/auth";
 // Extraemos automáticamente los tipos exactos de tu configuración de Better Auth
 type SessionData = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
 
-// Le enseñamos a TypeScript que `req.usuario` y `req.sesion` existen en Express
 declare global {
   namespace Express {
     interface Request {
@@ -38,7 +37,6 @@ export const requireAuth = async (
       return;
     }
 
-    // Inyectamos el usuario y la sesión dentro de `req` para usarlos en el controlador
     req.usuario = session.user;
     req.sesion = session.session;
 
@@ -49,9 +47,8 @@ export const requireAuth = async (
   }
 };
 
-/**
- * 2. Guardia de Rol Administrador (Se usa DESPUÉS de requireAuth)
- */
+// Guardia de Rol Administrador (Se usa DESPUÉS de requireAuth)
+
 export const requireAdmin = (
   req: Request,
   res: Response,
@@ -69,6 +66,5 @@ export const requireAdmin = (
     return;
   }
 
-  // Es ADMIN, lo dejamos pasar al controlador
   next();
 };
