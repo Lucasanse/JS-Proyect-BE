@@ -9,9 +9,8 @@ import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-app.all("/api/auth/*splat", toNodeHandler(auth));
-
 app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
+app.all("/api/auth/*splat", toNodeHandler(auth));
 app.use(express.json());
 
 // Muestra cada request en consola: "GET /health"
