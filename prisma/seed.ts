@@ -676,6 +676,10 @@ const tiposNotificacion = [
   },
 ];
 
+// Object.entries pierde el tipo de las claves; este helper lo conserva.
+const entries = <T extends object>(obj: T) =>
+  Object.entries(obj) as [Extract<keyof T, string>, T[keyof T]][];
+
 // Crea (o actualiza) un usuario con su cuenta de email y contraseña, igual que lo
 // haria Better Auth en el registro. Se usa el hash de Better Auth para que el login funcione.
 type DatosUsuario = Omit<Prisma.UsuarioUncheckedCreateInput, "id">;
