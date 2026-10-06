@@ -1,6 +1,7 @@
-import "dotenv/config";
-import { prisma } from "../src/utils/prisma";
-import bcrypt from "bcryptjs";
+import 'dotenv/config';
+import type { Prisma } from '@prisma/client';
+import { prisma } from '../src/utils/prisma';
+import { hashPassword } from 'better-auth/crypto';
 
 // ─── Datos del catalogo ───────────────────────────────────────────────
 // Todo se declara "as const" + "satisfies": asi TypeScript conoce los nombres
@@ -592,17 +593,68 @@ const tiposNotificacion = [
 const entries = <T extends object>(obj: T) =>
   Object.entries(obj) as [Extract<keyof T, string>, T[keyof T]][];
 
-async function main() {
-  if ((await prisma.producto.count()) > 0) {
-    console.log("La base ya tiene datos, no se vuelve a sembrar.");
-    return;
-  }
+// Crea (o actualiza) un usuario con su cuenta de email y contraseña, igual que lo
+// haria Better Auth en el registro. Se usa el hash de Better Auth para que el login funcione.
+type DatosUsuario = Omit<Prisma.UsuarioUncheckedCreateInput, 'id'>;
 
-  // Idiomas
+async function upsertUsuario(datos: DatosUsuario, password: string) {
+  const usuario = await prisma.usuario.upsert({
+    where: { correo: datos.correo },
+    create: datos,
+    update: datos,
+  });
+
+  const hash = await hashPassword(password);
+  const cuenta = await prisma.cuenta.findFirst({ where: { idUsuario: usuario.id, providerId: 'credential' } });
+  if (cuenta) {
+    await prisma.cuenta.update({ where: { id: cuenta.id }, data: { password: hash } });
+  } else {
+    await prisma.cuenta.create({
+      data: { idUsuario: usuario.id, accountId: String(usuario.id), providerId: 'credential', password: hash },
+    });
+  }
+  return usuario;
+}
+
+async function main() {
+  // Idiomas (upsert: se puede correr el seed varias veces)
   const idsIdioma = {} as Record<CodigoIdioma, number>;
   for (const idioma of idiomas) {
-    const creado = await prisma.idioma.create({ data: idioma });
+    const creado = await prisma.idioma.upsert({ where: { codigo: idioma.codigo }, create: idioma, update: {} });
     idsIdioma[idioma.codigo] = creado.idIdioma;
+  }
+
+  // Usuarios: siempre se crean/actualizan, aunque el catalogo ya exista
+  const admin = await upsertUsuario(
+    {
+      nombreCompleto: 'Administrador',
+      correo: 'admin@admin.com',
+      correoVerificado: true,
+      rol: 'ADMIN',
+      idIdioma: idsIdioma.es,
+      cargo: 'Administrador general',
+    },
+    'admin',
+  );
+
+  const cliente = await upsertUsuario(
+    {
+      nombreCompleto: 'Usuario de Prueba',
+      correo: 'user@user.com',
+      correoVerificado: true,
+      rol: 'CLIENTE',
+      idIdioma: idsIdioma.es,
+      direccion: 'Calle Falsa 123',
+      telefono: '2995551234',
+    },
+    'user',
+  );
+  console.log(`Admin   -> ${admin.correo} / admin`);
+  console.log(`Usuario -> ${cliente.correo} / user`);
+
+  if ((await prisma.producto.count()) > 0) {
+    console.log('El catalogo ya tiene datos, no se vuelve a sembrar.');
+    return;
   }
 
   // Categorias (solo organizan el catalogo)
@@ -723,7 +775,7 @@ async function main() {
   await prisma.preset.create({
     data: {
       idUsuario: cliente.id,
-      nombre: "PC Gamer AM5",
+      nombre: 'PC Gamer AM5',
       potenciaWatts,
       componentes: {
         create: piezas.map((p) => ({
@@ -734,16 +786,10 @@ async function main() {
     },
   });
 
-  const sinStock = [...componentes, ...otrosProductos]
-    .filter((p) => p.stock === 0)
-    .map((p) => p.nombre);
-  console.log(
-    `${componentes.length + otrosProductos.length} productos creados (${componentes.length} componentes de PC).`,
-  );
-  console.log(`Sin stock: ${sinStock.join(", ")}`);
-  console.log(`Admin   -> ${admin.correo} / Admin123!`);
-  console.log(`Cliente -> ${cliente.correo} / Cliente123!`);
-  console.log("Seed finalizado correctamente.");
+  const sinStock = [...componentes, ...otrosProductos].filter((p) => p.stock === 0).map((p) => p.nombre);
+  console.log(`${componentes.length + otrosProductos.length} productos creados (${componentes.length} componentes de PC).`);
+  console.log(`Sin stock: ${sinStock.join(', ')}`);
+  console.log('Seed finalizado correctamente.');
 }
 
 main()
