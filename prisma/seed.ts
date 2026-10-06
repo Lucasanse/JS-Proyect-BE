@@ -731,30 +731,6 @@ async function main() {
   // Tipos de notificacion
   await prisma.tipoNotificacion.createMany({ data: tiposNotificacion });
 
-  // Usuarios
-  const admin = await prisma.usuario.create({
-    data: {
-      nombreCompleto: "Administrador",
-      correo: "admin@ecommerce.com",
-      passwordHash: await bcrypt.hash("Admin123!", 10),
-      rol: "ADMIN",
-      idIdioma: idsIdioma.es,
-      cargo: "Administrador general",
-    },
-  });
-
-  const cliente = await prisma.usuario.create({
-    data: {
-      nombreCompleto: "Cliente de Prueba",
-      correo: "cliente@ecommerce.com",
-      passwordHash: await bcrypt.hash("Cliente123!", 10),
-      rol: "CLIENTE",
-      idIdioma: idsIdioma.es,
-      direccion: "Calle Falsa 123",
-      telefono: "2995551234",
-    },
-  });
-
   // Un preset de ejemplo para el cliente (2 modulos de RAM iguales)
   const piezas: {
     nombre: (typeof componentes)[number]["nombre"];
