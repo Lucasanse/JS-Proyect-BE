@@ -21,10 +21,6 @@ apiRouter.patch("/usuario/idioma", requireAuth, idioma.actualizarIdiomaUsuario);
 // Carrito (requiere sesion iniciada)
 apiRouter.get("/carrito", requireAuth, carrito.obtenerCarrito);
 apiRouter.post("/carrito/items", requireAuth, carrito.agregarItem);
-apiRouter.patch(
-  "/carrito/items/:idProducto",
-  requireAuth,
-  carrito.modificarCantidad,
-);
+apiRouter.patch("/carrito/items/:idProducto", requireAuth, carrito.modificarCantidad);
 apiRouter.delete("/carrito/items/:idProducto", requireAuth, carrito.quitarItem);
 apiRouter.delete("/carrito", requireAuth, carrito.vaciarCarrito);
