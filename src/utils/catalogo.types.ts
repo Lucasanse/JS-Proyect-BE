@@ -1,5 +1,3 @@
-
-
 export interface Paginacion {
   page: number;
   limit: number;
@@ -27,12 +25,36 @@ interface ProductoComun {
   precio: number;
   stock: number;
   imagenUrl: string | null;
-  disponible: boolean;
   categoria: CategoriaResumen;
 }
 
+export interface AtributoComponente {
+  nombre: string;
+  valor: string;
+  unidad: string | null;
+}
+
+export type ProductoDetalle = ProductoComun &
+  (
+    | {
+        esComponentePC: true;
+        tipoComponente: string;
+        wattsRequeridos: number;
+        atributos: AtributoComponente[];
+      }
+    | {
+        esComponentePC: false;
+        tipoComponente: null;
+        wattsRequeridos: null;
+        atributos: [];
+      }
+  );
+
 export type ProductoResumen = ProductoComun &
-  ({ esComponentePC: true; tipoComponente: string } | { esComponentePC: false; tipoComponente: null });
+  (
+    | { esComponentePC: true; tipoComponente: string }
+    | { esComponentePC: false; tipoComponente: null }
+  );
 
 // GET /api/carrito
 export interface ItemCarritoDetalle {
