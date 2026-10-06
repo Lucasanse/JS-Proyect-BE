@@ -570,6 +570,93 @@ const idiomas = [
 ] as const;
 type CodigoIdioma = (typeof idiomas)[number]["codigo"];
 
+// Traducciones al ingles de los productos del catalogo
+const traduccionesEn: Partial<
+  Record<NombreProducto, { nombre: string; descripcion: string }>
+> = {
+  // Componentes PC
+  "Ryzen 5 7600": {
+    nombre: "AMD Ryzen 5 7600 Processor",
+    descripcion: "6-core processor for gaming and general purpose.",
+  },
+  "Core i7-14700K": {
+    nombre: "Intel Core i7-14700K Processor",
+    descripcion: "High-performance 20-core desktop processor.",
+  },
+  "Core i5-14400F": {
+    nombre: "Intel Core i5-14400F Processor",
+    descripcion: "10-core processor without integrated graphics.",
+  },
+  "GeForce RTX 4060": {
+    nombre: "GeForce RTX 4060 Graphics Card",
+    descripcion: "Ideal graphics card for 1080p gaming.",
+  },
+  "GeForce RTX 5060 Ti 16GB": {
+    nombre: "GeForce RTX 5060 Ti 16GB Graphics Card",
+    descripcion: "Ideal graphics card for 1080p and 1440p gaming.",
+  },
+  "GeForce RTX 4070": {
+    nombre: "GeForce RTX 4070 Graphics Card",
+    descripcion: "Graphics card for 1440p gaming with ray tracing.",
+  },
+  "Radeon RX 7600": {
+    nombre: "Radeon RX 7600 Graphics Card",
+    descripcion: "AMD graphics card built for 1080p gaming.",
+  },
+  "Fury Beast 16GB DDR5": {
+    nombre: "Fury Beast 16GB DDR5 Memory",
+    descripcion: "16GB DDR5 RAM memory module.",
+  },
+  "Vengeance 16GB DDR4": {
+    nombre: "Vengeance 16GB DDR4 Memory",
+    descripcion: "16GB DDR4 RAM memory module.",
+  },
+  "B650M Gaming": {
+    nombre: "B650M Gaming Motherboard",
+    descripcion: "Micro ATX motherboard for AM5 processors.",
+  },
+  "Z790 Tomahawk": {
+    nombre: "Z790 Tomahawk Motherboard",
+    descripcion: "ATX motherboard for Intel LGA1700 processors.",
+  },
+  RM750e: {
+    nombre: "RM750e Power Supply",
+    descripcion: "750W fully modular power supply.",
+  },
+  "MWE 550 Bronze": {
+    nombre: "MWE 550 Bronze Power Supply",
+    descripcion: "550W power supply for mid-range builds.",
+  },
+  "SSD 990 EVO 1TB": {
+    nombre: "SSD 990 EVO 1TB Drive",
+    descripcion: "1TB NVMe solid state drive.",
+  },
+  "Barracuda 2TB": {
+    nombre: "Barracuda 2TB Hard Drive",
+    descripcion: "2TB hard drive for mass storage.",
+  },
+  // Otros productos
+  "PC Gamer Ryzen 5 RTX 4060": {
+    nombre: "Gaming PC Ryzen 5 RTX 4060",
+    descripcion: "Prebuilt desktop PC with Ryzen 5, 16GB RAM, and RTX 4060.",
+  },
+  "Teclado Mecanico K95": {
+    nombre: "K95 Mechanical Keyboard",
+    descripcion: "Mechanical gaming keyboard with programmable macro keys.",
+  },
+  "Mouse Gamer G203": {
+    nombre: "G203 Gaming Mouse",
+    descripcion: "Gaming mouse with customizable RGB lighting.",
+  },
+  "Auriculares HyperX Cloud II": {
+    nombre: "HyperX Cloud II Headset",
+    descripcion: "Gaming headset with 7.1 surround sound.",
+  },
+  'Monitor 24" 144Hz': {
+    nombre: '24" 144Hz Gaming Monitor',
+    descripcion: "24-inch Full HD monitor at 144Hz.",
+  },
+};
 const tiposNotificacion = [
   {
     codigo: "VENTA_CONFIRMADA",
@@ -588,10 +675,6 @@ const tiposNotificacion = [
     plantillaMensaje: "Tu solicitud #{idSolicitud} ya tiene diagnostico.",
   },
 ];
-
-// Object.entries pierde el tipo de las claves; este helper lo conserva.
-const entries = <T extends object>(obj: T) =>
-  Object.entries(obj) as [Extract<keyof T, string>, T[keyof T]][];
 
 // Crea (o actualiza) un usuario con su cuenta de email y contraseña, igual que lo
 // haria Better Auth en el registro. Se usa el hash de Better Auth para que el login funcione.
@@ -629,13 +712,7 @@ const entries = <T extends object>(obj: T) =>
   Object.entries(obj) as [Extract<keyof T, string>, T[keyof T]][];
 
 async function main() {
-  // Idiomas (upsert: se puede correr el seed varias veces)
-  if ((await prisma.producto.count()) > 0) {
-    console.log("La base ya tiene datos, no se vuelve a sembrar.");
-    return;
-  }
-
-  // Idiomas
+  // 1. Idiomas (se ejecuta SIEMPRE, aunque ya haya productos)
   const idsIdioma = {} as Record<CodigoIdioma, number>;
   for (const idioma of idiomas) {
     const creado = await prisma.idioma.upsert({
@@ -646,7 +723,7 @@ async function main() {
     idsIdioma[idioma.codigo] = creado.idIdioma;
   }
 
-  // Usuarios: siempre se crean/actualizan, aunque el catalogo ya exista
+  //Usuarios (se ejecuta SIEMPRE, aunque ya haya productos)
   const admin = await upsertUsuario(
     {
       nombreCompleto: "Administrador",
@@ -674,149 +751,151 @@ async function main() {
   console.log(`Admin   -> ${admin.correo} / admin`);
   console.log(`Usuario -> ${cliente.correo} / user`);
 
-  if ((await prisma.producto.count()) > 0) {
-    console.log("El catalogo ya tiene datos, no se vuelve a sembrar.");
-    return;
-  }
+  // Catálogo: solo se crea si todavía no hay productos
+  if ((await prisma.producto.count()) === 0) {
+    const categorias = {} as Record<NombreCategoria, number>;
+    for (const nombre of CATEGORIAS) {
+      const c = await prisma.categoria.create({ data: { nombre } });
+      categorias[nombre] = c.idCategoria;
+    }
 
-  // Categorias (solo organizan el catalogo)
-  const categorias = {} as Record<NombreCategoria, number>;
-  for (const nombre of CATEGORIAS) {
-    const c = await prisma.categoria.create({ data: { nombre } });
-    categorias[nombre] = c.idCategoria;
-  }
-
-  // Tipos de componente con sus atributos tecnicos
-  const tipos = {} as Record<TipoComponente, number>;
-  const atributos = {} as Record<TipoComponente, Record<string, number>>;
-  for (const [nombre, lista] of entries(atributosPorTipo)) {
-    const tipo = await prisma.tipoComponente.create({
-      data: {
-        nombre,
-        atributos: {
-          create: lista.map(([n, unidad]) => ({ nombre: n, unidad })),
+    const tipos = {} as Record<TipoComponente, number>;
+    const atributos = {} as Record<TipoComponente, Record<string, number>>;
+    for (const [nombre, lista] of entries(atributosPorTipo)) {
+      const tipo = await prisma.tipoComponente.create({
+        data: {
+          nombre,
+          atributos: {
+            create: lista.map(([n, unidad]) => ({ nombre: n, unidad })),
+          },
         },
-      },
-      include: { atributos: true },
-    });
-    tipos[nombre] = tipo.idTipoComponente;
-    atributos[nombre] = Object.fromEntries(
-      tipo.atributos.map((a) => [a.nombre, a.idAtributo]),
-    );
-  }
+        include: { atributos: true },
+      });
+      tipos[nombre] = tipo.idTipoComponente;
+      atributos[nombre] = Object.fromEntries(
+        tipo.atributos.map((a) => [a.nombre, a.idAtributo]),
+      );
+    }
 
-  // Componentes: Producto + ComponentePC + ValorAtributo
-  const idsPorNombre = {} as Record<NombreProducto, number>;
-  for (const c of componentes) {
-    const producto = await prisma.producto.create({
-      data: {
-        nombre: c.nombre,
-        descripcion: c.descripcion,
-        marca: c.marca,
-        precio: c.precio,
-        stock: c.stock,
-        imagenUrl: c.imagenUrl,
-        idCategoria: categorias[c.categoria],
-        componentePC: {
-          create: {
-            idTipoComponente: tipos[c.tipo],
-            wattsRequeridos: c.watts,
-            valoresAtributo: {
-              create: Object.entries(c.valores).map(([atributo, valor]) => ({
-                idAtributo: atributos[c.tipo][atributo],
-                valor,
-              })),
+    const idsPorNombre = {} as Record<NombreProducto, number>;
+    for (const c of componentes) {
+      const producto = await prisma.producto.create({
+        data: {
+          nombre: c.nombre,
+          descripcion: c.descripcion,
+          marca: c.marca,
+          precio: c.precio,
+          stock: c.stock,
+          imagenUrl: c.imagenUrl,
+          idCategoria: categorias[c.categoria],
+          componentePC: {
+            create: {
+              idTipoComponente: tipos[c.tipo],
+              wattsRequeridos: c.watts,
+              valoresAtributo: {
+                create: Object.entries(c.valores).map(([atributo, valor]) => ({
+                  idAtributo: atributos[c.tipo][atributo],
+                  valor,
+                })),
+              },
             },
           },
         },
-      },
-    });
-    idsPorNombre[c.nombre] = producto.idProducto;
-  }
+      });
+      idsPorNombre[c.nombre] = producto.idProducto;
+    }
 
-  // Productos que no son componentes
-  for (const p of otrosProductos) {
-    const producto = await prisma.producto.create({
+    for (const p of otrosProductos) {
+      const producto = await prisma.producto.create({
+        data: {
+          nombre: p.nombre,
+          descripcion: p.descripcion,
+          marca: p.marca,
+          precio: p.precio,
+          stock: p.stock,
+          imagenUrl: p.imagenUrl,
+          idCategoria: categorias[p.categoria],
+        },
+      });
+      idsPorNombre[p.nombre] = producto.idProducto;
+    }
+
+    await prisma.tipoNotificacion.createMany({ data: tiposNotificacion });
+
+    const piezas: {
+      nombre: (typeof componentes)[number]["nombre"];
+      cantidad: number;
+    }[] = [
+      { nombre: "Ryzen 5 7600", cantidad: 1 },
+      { nombre: "B650M Gaming", cantidad: 1 },
+      { nombre: "Fury Beast 16GB DDR5", cantidad: 2 },
+      { nombre: "GeForce RTX 4060", cantidad: 1 },
+      { nombre: "SSD 990 EVO 1TB", cantidad: 1 },
+    ];
+    const potenciaWatts = piezas.reduce(
+      (total, p) =>
+        total +
+        componentes.find((c) => c.nombre === p.nombre)!.watts * p.cantidad,
+      0,
+    );
+    await prisma.preset.create({
       data: {
-        nombre: p.nombre,
-        descripcion: p.descripcion,
-        marca: p.marca,
-        precio: p.precio,
-        stock: p.stock,
-        imagenUrl: p.imagenUrl,
-        idCategoria: categorias[p.categoria],
+        idUsuario: cliente.id,
+        nombre: "PC Gamer AM5",
+        potenciaWatts,
+        componentes: {
+          create: piezas.map((p) => ({
+            idProducto: idsPorNombre[p.nombre],
+            cantidad: p.cantidad,
+          })),
+        },
       },
     });
-    idsPorNombre[p.nombre] = producto.idProducto;
+
+    const sinStock = [...componentes, ...otrosProductos]
+      .filter((p) => p.stock === 0)
+      .map((p) => p.nombre);
+    console.log(
+      `${componentes.length + otrosProductos.length} productos creados (${componentes.length} componentes de PC).`,
+    );
+    console.log(`Sin stock: ${sinStock.join(", ")}`);
+  } else {
+    console.log("El catalogo ya existe, se saltea la creacion de productos.");
   }
 
-  // Tipos de notificacion
-  await prisma.tipoNotificacion.createMany({ data: tiposNotificacion });
+  // TRADUCCIONES: Se ejecuta SIEMPRE y guarda traduccionesEn en la tabla TraduccionProducto
+  let traduccionesCargadas = 0;
+  for (const [nombreOriginal, trad] of entries(traduccionesEn)) {
+    if (!trad) continue;
 
-  // Usuarios
-  const admin = await prisma.usuario.create({
-    data: {
-      nombreCompleto: "Administrador",
-      correo: "admin@ecommerce.com",
-      passwordHash: await bcrypt.hash("Admin123!", 10),
-      rol: "ADMIN",
-      idIdioma: idsIdioma.es,
-      cargo: "Administrador general",
-    },
-  });
+    const prod = await prisma.producto.findFirst({
+      where: { nombre: nombreOriginal },
+      select: { idProducto: true },
+    });
+    if (!prod) continue;
 
-  const cliente = await prisma.usuario.create({
-    data: {
-      nombreCompleto: "Cliente de Prueba",
-      correo: "cliente@ecommerce.com",
-      passwordHash: await bcrypt.hash("Cliente123!", 10),
-      rol: "CLIENTE",
-      idIdioma: idsIdioma.es,
-      direccion: "Calle Falsa 123",
-      telefono: "2995551234",
-    },
-  });
-
-  // Un preset de ejemplo para el cliente (2 modulos de RAM iguales)
-  const piezas: {
-    nombre: (typeof componentes)[number]["nombre"];
-    cantidad: number;
-  }[] = [
-    { nombre: "Ryzen 5 7600", cantidad: 1 },
-    { nombre: "B650M Gaming", cantidad: 1 },
-    { nombre: "Fury Beast 16GB DDR5", cantidad: 2 },
-    { nombre: "GeForce RTX 4060", cantidad: 1 },
-    { nombre: "SSD 990 EVO 1TB", cantidad: 1 },
-  ];
-  const potenciaWatts = piezas.reduce(
-    (total, p) =>
-      total +
-      componentes.find((c) => c.nombre === p.nombre)!.watts * p.cantidad,
-    0,
-  );
-  await prisma.preset.create({
-    data: {
-      idUsuario: cliente.id,
-      nombre: "PC Gamer AM5",
-      idUsuario: cliente.id,
-      nombre: "PC Gamer AM5",
-      potenciaWatts,
-      componentes: {
-        create: piezas.map((p) => ({
-          idProducto: idsPorNombre[p.nombre],
-          cantidad: p.cantidad,
-        })),
+    await prisma.traduccionProducto.upsert({
+      where: {
+        idProducto_idIdioma: {
+          idProducto: prod.idProducto,
+          idIdioma: idsIdioma.en,
+        },
       },
-    },
-  });
+      create: {
+        idProducto: prod.idProducto,
+        idIdioma: idsIdioma.en,
+        nombreTraducido: trad.nombre,
+        descripcionTraducida: trad.descripcion,
+      },
+      update: {
+        nombreTraducido: trad.nombre,
+        descripcionTraducida: trad.descripcion,
+      },
+    });
+    traduccionesCargadas++;
+  }
 
-  const sinStock = [...componentes, ...otrosProductos]
-    .filter((p) => p.stock === 0)
-    .map((p) => p.nombre);
-  console.log(
-    `${componentes.length + otrosProductos.length} productos creados (${componentes.length} componentes de PC).`,
-  );
-  console.log(`Sin stock: ${sinStock.join(", ")}`);
+  console.log(`Traducciones (en) sincronizadas: ${traduccionesCargadas}.`);
   console.log("Seed finalizado correctamente.");
 }
 
