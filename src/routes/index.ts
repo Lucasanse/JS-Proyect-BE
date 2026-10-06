@@ -1,9 +1,10 @@
 import { Router } from "express";
 import * as productos from "../controllers/productos.controller";
 import * as categorias from "../controllers/categorias.controller";
-
+import { requireAuth } from "../middlewares/auth";
 export const apiRouter = Router();
-
+import * as producto from "../controllers/productoDetalle.controller";
+import * as carrito from "../controllers/carrito.controller";
 // Catalogo
 apiRouter.get("/productos", productos.listarProductos);
 apiRouter.get("/productoDetalle/:id", producto.obtenerProductoPorId);
