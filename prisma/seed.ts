@@ -712,8 +712,6 @@ async function upsertUsuario(datos: DatosUsuario, password: string) {
   }
   return usuario;
 }
-const entries = <T extends object>(obj: T) =>
-  Object.entries(obj) as [Extract<keyof T, string>, T[keyof T]][];
 
 async function main() {
   // 1. Idiomas (se ejecuta SIEMPRE, aunque ya haya productos)
