@@ -51,7 +51,10 @@ export type ProductoDetalle = ProductoComun &
   );
 
 export type ProductoResumen = ProductoComun &
-  ({ esComponentePC: true; tipoComponente: string } | { esComponentePC: false; tipoComponente: null });
+  (
+    | { esComponentePC: true; tipoComponente: string }
+    | { esComponentePC: false; tipoComponente: null }
+  );
 
 // GET /api/carrito
 export interface ItemCarritoDetalle {
