@@ -33,3 +33,16 @@ interface ProductoComun {
 
 export type ProductoResumen = ProductoComun &
   ({ esComponentePC: true; tipoComponente: string } | { esComponentePC: false; tipoComponente: null });
+
+// GET /api/carrito
+export interface ItemCarritoDetalle {
+  producto: ProductoResumen;
+  cantidad: number;
+  subtotal: number;
+}
+
+export interface CarritoDetalle {
+  items: ItemCarritoDetalle[];
+  cantidadTotal: number;
+  total: number;
+}
