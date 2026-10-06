@@ -8,9 +8,9 @@ import { listarMarcasQuerySchema, listarProductosQuerySchema } from '../validati
 // Express 5 pasa al errorHandler los errores de funciones async
 // (ZodError -> 400, AppError -> su status).
 
-// GET /api/productos?q=&categoria=&marca=&precioMin=&precioMax=&page=&limit=
+// GET /api/productos?q=&categoria=&marca=&precioMin=&precioMax=&conStock=&page=&limit=
 export async function listarProductos(req: Request, res: Response<Paginado<ProductoResumen>>) {
-  const { page, limit, q, categoria, marca, precioMin, precioMax } = listarProductosQuerySchema.parse(req.query);
+  const { page, limit, q, categoria, marca, precioMin, precioMax, conStock } = listarProductosQuerySchema.parse(req.query);
 
   // Los filtros que no vienen quedan undefined y Prisma los ignora.
   const where: Prisma.ProductoWhereInput = {
@@ -18,6 +18,7 @@ export async function listarProductos(req: Request, res: Response<Paginado<Produ
     idCategoria: categoria,
     marca: marca ? { equals: marca, mode: 'insensitive' } : undefined,
     precio: { gte: precioMin, lte: precioMax },
+    stock: conStock ? { gt: 0 } : undefined,
   };
 
   const [productos, total] = await prisma.$transaction([

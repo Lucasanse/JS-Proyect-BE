@@ -14,6 +14,8 @@ export const listarProductosQuerySchema = z
     marca: z.string().trim().min(1).max(100).optional(),
     precioMin: z.coerce.number().min(0).optional(),
     precioMax: z.coerce.number().min(0).optional(),
+    // ?conStock=true -> solo productos con stock disponible
+    conStock: z.literal('true').optional(),
   })
   .refine((f) => f.precioMin === undefined || f.precioMax === undefined || f.precioMin <= f.precioMax, {
     message: 'precioMin no puede ser mayor que precioMax',
