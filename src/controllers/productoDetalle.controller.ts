@@ -3,10 +3,12 @@ import { prisma } from "../utils/prisma";
 import { ProductoDetalle } from "../utils/catalogo.types";
 
 export const obtenerProductoPorId = async (
-  req: Request<{ id: string }>,
+  req: Request<{ id: string }, unknown, unknown, { lang?: string }>,
   res: Response<ProductoDetalle | { error: string }>,
 ): Promise<void> => {
   const idProducto = Number(req.params.id);
+
+  const codigoIdioma = (req.query.lang || "es").toLowerCase();
 
   //Por si le pinta andar de gracioso al id
 
@@ -19,6 +21,14 @@ export const obtenerProductoPorId = async (
     where: { idProducto },
     include: {
       categoria: true,
+      traducciones: {
+        where: {
+          idioma: {
+            codigo: codigoIdioma,
+            activo: true,
+          },
+        },
+      },
       componentePC: {
         include: {
           tipoComponente: true,
@@ -37,15 +47,19 @@ export const obtenerProductoPorId = async (
     return;
   }
 
+  const traduccion = producto.traducciones[0];
+
   const base = {
     id: producto.idProducto,
-    nombre: producto.nombre,
-    descripcion: producto.descripcion ?? "",
+    nombre: traduccion ? traduccion.nombreTraducido : producto.nombre,
+    descripcion: traduccion
+      ? traduccion.descripcionTraducida
+      : (producto.descripcion ?? ""),
     marca: producto.marca,
     precio: Number(producto.precio),
     stock: producto.stock,
     imagenUrl: producto.imagenUrl,
-    disponible: producto.stock,
+    disponible: producto.stock > 0,
     categoria: {
       id: producto.categoria.idCategoria,
       nombre: producto.categoria.nombre,
