@@ -1,0 +1,127 @@
+## Qué hace
+
+Endpoints de administración para crear, editar, eliminar y desactivar productos. Un producto con ventas no se puede eliminar: el endpoint responde `409` y hay que desactivarlo, así no se pierde el historial.
+
+Closes #35
+
+## Cambios
+
+### Productos (`/api/admin/productos`, solo rol ADMIN)
+- `GET /` listado con búsqueda, filtro por categoría y estado (activos/inactivos/todos), paginado
+- `GET /:id` detalle para editar
+- `POST /` alta con validaciones (nombre, descripción, marca, categoría, precio > 0, stock ≥ 0)
+- `PUT /:id` y `PATCH /:id` edición
+- `DELETE /:id` elimina solo si no tiene ventas. Si tiene ventas, o está en una PC armada por un usuario, responde `409` con un mensaje que indica desactivarlo
+- `PATCH /:id/estado` activar o desactivar
+- `POST /imagen` subida de imagen (multipart, campo `imagen`): se guarda en `uploads/` y devuelve la URL pública
+
+### Datos del formulario
+- `GET /api/admin/marcas` marcas con las categorías donde tienen productos
+- `POST /api/admin/marcas` crea una marca; si ya existe con otras mayúsculas devuelve la existente
+- `GET /api/admin/tipos-componente` tipos con sus atributos técnicos y valores sugeridos
+
+### Permisos
+- Todo `/api/admin/*` pasa por `requireAuth` + `requireAdmin`: sin sesión `401`, sin rol admin `403`
+
+### Catálogo público
+- `/productos`, `/marcas` y `/productoDetalle/:id` muestran solo productos activos
+- No se puede agregar al carrito un producto desactivado
+
+### Base de datos (migraciones)
+- `producto_activo`: campo `activo` (boolean, default `true`) en `Producto`
+- `marcas_y_opciones_atributos`:
+  - tabla `Marca`; `Producto.marca` (texto) pasa a ser `idMarca`. La migración mueve las marcas existentes sin perder datos
+  - `AtributoTecnico.numerico` y `AtributoTecnico.opciones` (valores sugeridos)
+
+### Componentes de PC
+- El alta y la edición aceptan `componente: { idTipoComponente, wattsRequeridos, atributos: [{ idAtributo, valor }] }` o `null`
+- Se valida que los atributos sean del tipo elegido y que los numéricos sean números
+
+### Seed
+- Categorías, tipos de componente y atributos se sincronizan siempre (upsert), aunque la base ya tenga productos
+- 11 tipos de componente para PC gamer: CPU, GPU, RAM, Motherboard, Fuente, Almacenamiento, Gabinete, Cooler CPU, Refrigeración líquida, Ventiladores y Placa de red
+- Categorías nuevas: Monitores, Gabinetes, Refrigeración, Conectividad, Sillas Gamer
+- Productos de ejemplo para los tipos nuevos (solo se crean en una base vacía)
+
+### Otros
+- `errorHandler` responde `400` ante un JSON inválido y ante errores de subida de imagen
+- Dependencia nueva: `multer`
+
+## Cómo probar
+npm install
+npx prisma migrate deploy
+npx prisma generate
+npm run prisma:seed
+npm run dev
+
+Admin del seed: `admin@admin.com` / `admin`
+
+⚠️ Usar `migrate deploy` y no `migrate dev`: en algunas bases locales hay un desfasaje con la migración `better_auth`, y `migrate dev` puede pedir resetear la base.
+
+__________________________________________________________________________________
+
+PARA EL FRONT:
+## Qué hace
+
+Panel para que el admin gestione los productos. Los cambios se reflejan en el catálogo de los usuarios sin recargar la página.
+
+Closes #36
+
+⚠️ Depende del PR del BE (#35): endpoints `/api/admin/*`, tabla de marcas y componentes.
+
+## Cambios
+
+### Panel de administración (`/admin`)
+- Solo para el rol ADMIN: sin sesión redirige al login y un usuario sin permisos ve un aviso `403`
+- Link "Admin" en el Navbar, visible solo para admins
+- Menú lateral (en mobile, pestañas) con las secciones Inicio, Catálogo, Servicio técnico, Ventas y Usuarios
+- Página de inicio "¿Qué querés hacer?" con una tarjeta por funcionalidad. Las que todavía no existen aparecen como "Pronto"
+- Para sumar una sección: agregar la ruta en `main.tsx` y la entrada en `pages/Admin/secciones.tsx`
+
+### Gestión de productos (`/admin/productos`)
+- Tabla con imagen, marca, categoría, precio, stock y estado. En mobile se muestra como tarjetas
+- Búsqueda, filtro por categoría y Todos/Activos/Inactivos, con los filtros en la URL. Paginado
+- Switch para activar o desactivar
+- Eliminar con confirmación. Si el BE responde `409` (producto con ventas), se muestra el motivo y un botón "Desactivar producto"
+- Estados de carga y error con "Reintentar", y toasts de confirmación
+
+### Formulario de alta y edición
+- Validaciones en el momento, con error por campo y foco en el primero
+- Imagen: clic o arrastrar para subirla, o pegar una URL (ver "Cómo se guardan las imágenes")
+- Primero se elige la categoría y después la marca: el select muestra arriba las marcas de esa categoría y permite agregar una marca nueva ahí mismo
+- Sección plegable "Componente de PC": tipo, consumo (W) y atributos técnicos de ese tipo
+  - Los numéricos se cargan como número con su unidad; el resto tiene sugerencias, pero acepta otro valor
+  - En productos nuevos, el tipo se sugiere según la categoría
+- Sección plegable "Traducción al inglés" (opcional)
+
+### Catálogo sin recarga manual
+- `services/catalogoEventos.ts`: al modificar un producto se avisa a las otras pestañas con `BroadcastChannel`, y además se refresca al volver a la pestaña
+- Inicio, catálogo (sin perder el scroll), detalle y carrito vuelven a pedir los datos automáticamente
+
+### Componentes nuevos
+- `Modal`, `ToastProvider` / `useToast`, `RutaAdmin`, `AdminLayout`
+- Textos en español e inglés
+
+## Cómo se guardan las imágenes
+
+Las imágenes se guardan **en el disco del servidor del BE**, no en la base de datos ni en un servicio externo. En la base solo se guarda la URL (`imagenUrl`).
+
+1. **En el formulario (FE):** el admin hace clic en el recuadro de la imagen, que abre un `<input type="file">` oculto, o arrastra el archivo encima (drag & drop nativo del navegador). No se usa ninguna librería.
+2. **Validación en el FE:** antes de enviar se controla que sea una imagen y que no pese más de 5 MB.
+3. **Envío:** el archivo se manda con `FormData` a `POST /api/admin/productos/imagen` apenas se elige, y se muestra "Subiendo..." sobre la vista previa.
+4. **En el BE:** `multer` recibe el archivo, vuelve a validar el formato (JPG, PNG, WEBP, GIF o AVIF) y el tamaño, y lo guarda en la carpeta `uploads/` con un nombre aleatorio (por ejemplo, `3db7cafa-....png`) para que no se pisen dos archivos con el mismo nombre.
+5. **URL:** el BE responde con la URL pública (`http://localhost:3000/uploads/xxx.png`), que el BE sirve como archivo estático. El formulario muestra la vista previa y esa URL se guarda en el producto al hacer clic en "Guardar".
+6. **Limpieza:** si se cambia o se quita la imagen de un producto, o se elimina el producto, el BE borra el archivo del disco, siempre que ningún otro producto lo use.
+
+También se puede **pegar la URL** de una imagen que ya esté en internet. En ese caso no se sube nada y se guarda esa URL tal cual.
+
+⚠️ La carpeta `uploads/` está en el `.gitignore`: las imágenes subidas no van al repositorio, así que cada uno tiene las suyas en su máquina.
+
+## Cómo probar
+1. Levantar el BE con sus migraciones y el seed (ver el PR del BE) y después `npm run dev`
+2. Entrar con `admin@admin.com` / `admin` y hacer clic en "Admin"
+3. Crear un producto en la categoría "Procesadores": se sugiere el tipo CPU y aparecen sus atributos
+4. Subir una imagen arrastrándola al recuadro y verificar que se ve en el catálogo
+5. Abrir `/productos` en otra pestaña, cambiar el precio desde el admin y ver que se actualiza solo
+6. Desactivar un producto: deja de aparecer en el catálogo
+7. Entrar con `user@user.com` / `user` y abrir `/admin`: aparece el `403`
