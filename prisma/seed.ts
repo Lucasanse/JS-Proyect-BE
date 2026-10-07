@@ -21,47 +21,203 @@ const CATEGORIAS = [
   "Mouse",
   "Auriculares",
   "Perifericos",
+  "Monitores",
+  "Gabinetes",
+  "Refrigeracion",
+  "Conectividad",
+  "Sillas Gamer",
   "Insumos",
 ] as const;
 type NombreCategoria = (typeof CATEGORIAS)[number];
 
-// Atributos tecnicos por tipo de componente: [nombre, unidad]
+// ─── Tipos de componente y sus atributos tecnicos ───────────────────────
+// Todos los componentes que puede llevar una PC gamer.
+// - numerico: true -> el admin carga un numero (se muestra con su unidad).
+// - opciones -> valores tipicos que se sugieren al cargar (igual se puede escribir otro).
+// Los nombres ya existentes (Socket, Nucleos, Frecuencia...) no se cambian porque
+// el seed los busca por nombre: renombrarlos crearia atributos nuevos.
+
+interface AtributoSeed {
+  nombre: string;
+  unidad?: string;
+  numerico?: true;
+  opciones?: readonly string[];
+}
+
+const SI_NO = ["Si", "No"] as const;
+const RGB = ["No", "RGB", "ARGB"] as const;
+const SOCKETS = ["AM4", "AM5", "LGA1200", "LGA1700", "LGA1851"] as const;
+const SOCKETS_COOLER = [
+  "AM4 / AM5 / LGA1700 / LGA1851",
+  "AM4 / AM5 / LGA1200 / LGA1700",
+  "AM4 / AM5",
+  "LGA1700 / LGA1851",
+] as const;
+
 const atributosPorTipo = {
   CPU: [
-    ["Socket", null],
-    ["Nucleos", null],
-    ["Frecuencia", "GHz"],
+    { nombre: "Socket", opciones: SOCKETS },
+    { nombre: "Nucleos", numerico: true },
+    { nombre: "Frecuencia", unidad: "GHz", numerico: true }, // frecuencia base
+    { nombre: "Hilos", numerico: true },
+    { nombre: "Frecuencia turbo", unidad: "GHz", numerico: true },
+    { nombre: "Cache L3", unidad: "MB", numerico: true },
+    { nombre: "TDP", unidad: "W", numerico: true },
+    { nombre: "Graficos integrados", opciones: SI_NO },
+    { nombre: "Memoria soportada", opciones: ["DDR4", "DDR5", "DDR4 / DDR5"] },
+    { nombre: "Cooler incluido", opciones: SI_NO },
+    { nombre: "Litografia", unidad: "nm", numerico: true },
   ],
   GPU: [
-    ["Memoria", "GB"],
-    ["Tipo de memoria", null],
+    { nombre: "Memoria", unidad: "GB", numerico: true },
+    { nombre: "Tipo de memoria", opciones: ["GDDR6", "GDDR6X", "GDDR7"] },
+    {
+      nombre: "Chip grafico",
+      opciones: [
+        "GeForce RTX 3060",
+        "GeForce RTX 4060",
+        "GeForce RTX 4060 Ti",
+        "GeForce RTX 4070",
+        "GeForce RTX 4070 Super",
+        "GeForce RTX 4070 Ti Super",
+        "GeForce RTX 4080 Super",
+        "GeForce RTX 4090",
+        "GeForce RTX 5060",
+        "GeForce RTX 5060 Ti",
+        "GeForce RTX 5070",
+        "GeForce RTX 5070 Ti",
+        "GeForce RTX 5080",
+        "GeForce RTX 5090",
+        "Radeon RX 7600",
+        "Radeon RX 7700 XT",
+        "Radeon RX 7800 XT",
+        "Radeon RX 7900 XT",
+        "Radeon RX 7900 XTX",
+        "Radeon RX 9060 XT",
+        "Radeon RX 9070",
+        "Radeon RX 9070 XT",
+        "Intel Arc B580",
+      ],
+    },
+    { nombre: "Bus de memoria", unidad: "bits", numerico: true },
+    { nombre: "Frecuencia boost", unidad: "MHz", numerico: true },
+    { nombre: "Interfaz", opciones: ["PCIe 4.0 x8", "PCIe 4.0 x16", "PCIe 5.0 x8", "PCIe 5.0 x16"] },
+    {
+      nombre: "Conectores de energia",
+      opciones: ["1x 8 pines", "2x 8 pines", "3x 8 pines", "1x 16 pines (12V-2x6)"],
+    },
+    { nombre: "Fuente recomendada", unidad: "W", numerico: true },
+    { nombre: "Largo", unidad: "mm", numerico: true },
+    { nombre: "Salidas de video", opciones: ["3x DisplayPort, 1x HDMI", "2x DisplayPort, 2x HDMI", "1x DisplayPort, 1x HDMI"] },
   ],
   RAM: [
-    ["Capacidad", "GB"],
-    ["Tipo", null],
-    ["Frecuencia", "MHz"],
+    { nombre: "Capacidad", unidad: "GB", numerico: true }, // capacidad total del kit
+    { nombre: "Tipo", opciones: ["DDR4", "DDR5"] },
+    { nombre: "Frecuencia", unidad: "MHz", numerico: true },
+    { nombre: "Modulos", numerico: true },
+    { nombre: "Latencia CAS", numerico: true },
+    { nombre: "Voltaje", unidad: "V", numerico: true },
+    { nombre: "Formato", opciones: ["DIMM", "SO-DIMM"] },
+    { nombre: "RGB", opciones: RGB },
   ],
   Motherboard: [
-    ["Socket", null],
-    ["Tipo de RAM", null],
-    ["Formato", null],
+    { nombre: "Socket", opciones: SOCKETS },
+    { nombre: "Tipo de RAM", opciones: ["DDR4", "DDR5"] },
+    { nombre: "Formato", opciones: ["ATX", "mATX", "Mini-ITX", "E-ATX"] },
+    {
+      nombre: "Chipset",
+      opciones: [
+        "A520", "B550", "X570", "A620", "B650", "B650E", "X670E", "B850", "X870", "X870E",
+        "H610", "B660", "B760", "Z690", "Z790", "B860", "Z890",
+      ],
+    },
+    { nombre: "Slots de memoria", numerico: true },
+    { nombre: "Memoria maxima", unidad: "GB", numerico: true },
+    { nombre: "Ranuras M.2", numerico: true },
+    { nombre: "Puertos SATA", numerico: true },
+    { nombre: "PCIe principal", opciones: ["PCIe 3.0 x16", "PCIe 4.0 x16", "PCIe 5.0 x16"] },
+    { nombre: "WiFi", opciones: ["No", "WiFi 6", "WiFi 6E", "WiFi 7"] },
+    { nombre: "Bluetooth", opciones: SI_NO },
   ],
   Fuente: [
-    ["Potencia", "W"],
-    ["Certificacion", null],
+    { nombre: "Potencia", unidad: "W", numerico: true },
+    {
+      nombre: "Certificacion",
+      opciones: [
+        "Sin certificacion",
+        "80 Plus",
+        "80 Plus Bronze",
+        "80 Plus Silver",
+        "80 Plus Gold",
+        "80 Plus Platinum",
+        "80 Plus Titanium",
+      ],
+    },
+    { nombre: "Modular", opciones: ["No", "Semi modular", "Full modular"] },
+    { nombre: "Formato", opciones: ["ATX", "SFX", "SFX-L"] },
+    { nombre: "ATX 3.x (conector 12V-2x6)", opciones: SI_NO },
+    { nombre: "PFC activo", opciones: SI_NO },
   ],
   Almacenamiento: [
-    ["Capacidad", "GB"],
-    ["Tipo", null],
+    { nombre: "Capacidad", unidad: "GB", numerico: true },
+    { nombre: "Tipo", opciones: ["NVMe", "SSD SATA", "HDD"] },
+    { nombre: "Formato", opciones: ["M.2 2280", '2.5"', '3.5"'] },
+    { nombre: "Interfaz", opciones: ["PCIe 3.0 x4", "PCIe 4.0 x4", "PCIe 5.0 x4", "SATA III"] },
+    { nombre: "Lectura secuencial", unidad: "MB/s", numerico: true },
+    { nombre: "Escritura secuencial", unidad: "MB/s", numerico: true },
+    { nombre: "RPM", numerico: true }, // solo discos rigidos
+    { nombre: "TBW", unidad: "TB", numerico: true }, // durabilidad de los SSD
   ],
-} as const satisfies Record<
-  string,
-  readonly (readonly [string, string | null])[]
->;
+  Gabinete: [
+    { nombre: "Formato", opciones: ["Full Tower", "Mid Tower", "Mini Tower", "Mini-ITX"] },
+    {
+      nombre: "Motherboards soportadas",
+      opciones: ["E-ATX / ATX / mATX / Mini-ITX", "ATX / mATX / Mini-ITX", "mATX / Mini-ITX", "Mini-ITX"],
+    },
+    { nombre: "Largo maximo de GPU", unidad: "mm", numerico: true },
+    { nombre: "Altura maxima de cooler", unidad: "mm", numerico: true },
+    { nombre: "Ventiladores incluidos", numerico: true },
+    { nombre: "Radiador maximo", unidad: "mm", numerico: true },
+    { nombre: "Panel lateral", opciones: ["Vidrio templado", "Acrilico", "Malla", "Acero"] },
+    { nombre: "Fuente incluida", opciones: SI_NO },
+    { nombre: "Color", opciones: ["Negro", "Blanco"] },
+  ],
+  "Cooler CPU": [
+    { nombre: "Sockets compatibles", opciones: SOCKETS_COOLER },
+    { nombre: "Altura", unidad: "mm", numerico: true },
+    { nombre: "TDP soportado", unidad: "W", numerico: true },
+    { nombre: "Ventilador", unidad: "mm", numerico: true },
+    { nombre: "Ruido maximo", unidad: "dBA", numerico: true },
+    { nombre: "RGB", opciones: RGB },
+  ],
+  "Refrigeracion liquida": [
+    { nombre: "Radiador", unidad: "mm", numerico: true },
+    { nombre: "Sockets compatibles", opciones: SOCKETS_COOLER },
+    { nombre: "Ventiladores", numerico: true },
+    { nombre: "TDP soportado", unidad: "W", numerico: true },
+    { nombre: "Pantalla LCD", opciones: SI_NO },
+    { nombre: "RGB", opciones: RGB },
+  ],
+  Ventiladores: [
+    { nombre: "Diametro", unidad: "mm", numerico: true },
+    { nombre: "Unidades", numerico: true },
+    { nombre: "Velocidad maxima", unidad: "RPM", numerico: true },
+    { nombre: "Flujo de aire", unidad: "CFM", numerico: true },
+    { nombre: "Ruido maximo", unidad: "dBA", numerico: true },
+    { nombre: "Conector", opciones: ["3 pines", "4 pines PWM"] },
+    { nombre: "RGB", opciones: RGB },
+  ],
+  "Placa de red": [
+    { nombre: "Conexion", opciones: ["WiFi 6", "WiFi 6E", "WiFi 7", "Ethernet 2.5G", "Ethernet 10G"] },
+    { nombre: "Interfaz", opciones: ["PCIe x1", "PCIe x4", "USB", "M.2"] },
+    { nombre: "Velocidad maxima", unidad: "Mbps", numerico: true },
+    { nombre: "Bluetooth", opciones: ["No", "5.2", "5.3", "5.4"] },
+  ],
+} as const satisfies Record<string, readonly AtributoSeed[]>;
 
 type TipoComponente = keyof typeof atributosPorTipo;
 type AtributoDe<T extends TipoComponente> =
-  (typeof atributosPorTipo)[T][number][0];
+  (typeof atributosPorTipo)[T][number]["nombre"];
 
 interface ProductoSeed {
   categoria: NombreCategoria;
@@ -70,15 +226,15 @@ interface ProductoSeed {
   precio: number;
   stock: number;
   descripcion: string;
-  imagenUrl: string;
+  imagenUrl?: string;
 }
 
-// Union por tipo: un CPU solo acepta atributos de CPU, y tiene que tenerlos todos.
+// Union por tipo: un CPU solo acepta atributos de CPU. No hace falta cargarlos todos.
 type ComponenteSeed = {
   [T in TipoComponente]: ProductoSeed & {
     tipo: T;
     watts: number;
-    valores: Record<AtributoDe<T>, string>;
+    valores: Partial<Record<AtributoDe<T>, string>>;
   };
 }[TipoComponente];
 
@@ -278,6 +434,98 @@ const componentes = [
     imagenUrl:
       "https://www.deffo.com.ar/wp-content/uploads/2020/08/ST2000DM008-1.jpg",
     valores: { Capacidad: "2000", Tipo: "HDD" },
+  },
+  {
+    categoria: "Gabinetes",
+    tipo: "Gabinete",
+    watts: 0,
+    nombre: "Lancool 216",
+    marca: "Lian Li",
+    precio: 140000,
+    stock: 6,
+    descripcion: "Gabinete Mid Tower con frente mesh y dos ventiladores de 160mm.",
+    valores: {
+      Formato: "Mid Tower",
+      "Motherboards soportadas": "E-ATX / ATX / mATX / Mini-ITX",
+      "Largo maximo de GPU": "392",
+      "Altura maxima de cooler": "180",
+      "Ventiladores incluidos": "3",
+      "Radiador maximo": "360",
+      "Panel lateral": "Vidrio templado",
+      "Fuente incluida": "No",
+      Color: "Negro",
+    },
+  },
+  {
+    categoria: "Refrigeracion",
+    tipo: "Cooler CPU",
+    watts: 3,
+    nombre: "AK400",
+    marca: "DeepCool",
+    precio: 45000,
+    stock: 15,
+    descripcion: "Cooler por aire de torre simple con ventilador de 120mm.",
+    valores: {
+      "Sockets compatibles": "AM4 / AM5 / LGA1700 / LGA1851",
+      Altura: "155",
+      "TDP soportado": "220",
+      Ventilador: "120",
+      "Ruido maximo": "29",
+      RGB: "No",
+    },
+  },
+  {
+    categoria: "Refrigeracion",
+    tipo: "Refrigeracion liquida",
+    watts: 15,
+    nombre: "Liquid Freezer III 360",
+    marca: "Arctic",
+    precio: 160000,
+    stock: 5,
+    descripcion: "Refrigeracion liquida AIO con radiador de 360mm.",
+    valores: {
+      Radiador: "360",
+      "Sockets compatibles": "AM4 / AM5 / LGA1700 / LGA1851",
+      Ventiladores: "3",
+      "TDP soportado": "300",
+      "Pantalla LCD": "No",
+      RGB: "No",
+    },
+  },
+  {
+    categoria: "Refrigeracion",
+    tipo: "Ventiladores",
+    watts: 4,
+    nombre: "P12 PWM PST Pack x5",
+    marca: "Arctic",
+    precio: 38000,
+    stock: 20,
+    descripcion: "Pack de 5 ventiladores de 120mm silenciosos.",
+    valores: {
+      Diametro: "120",
+      Unidades: "5",
+      "Velocidad maxima": "1800",
+      "Flujo de aire": "56",
+      "Ruido maximo": "22",
+      Conector: "4 pines PWM",
+      RGB: "No",
+    },
+  },
+  {
+    categoria: "Conectividad",
+    tipo: "Placa de red",
+    watts: 8,
+    nombre: "Archer TX55E",
+    marca: "TP-Link",
+    precio: 55000,
+    stock: 9,
+    descripcion: "Placa de red WiFi 6 PCIe con Bluetooth 5.2.",
+    valores: {
+      Conexion: "WiFi 6",
+      Interfaz: "PCIe x1",
+      "Velocidad maxima": "3000",
+      Bluetooth: "5.2",
+    },
   },
 ] as const satisfies readonly ComponenteSeed[];
 
@@ -487,7 +735,7 @@ const otrosProductos = [
   },
   // Perifericos
   {
-    categoria: "Perifericos",
+    categoria: "Monitores",
     nombre: 'Monitor 24" 144Hz',
     marca: "Samsung",
     precio: 320000,
@@ -753,31 +1001,37 @@ async function main() {
   console.log(`Admin   -> ${admin.correo} / admin`);
   console.log(`Usuario -> ${cliente.correo} / user`);
 
+  // Categorias, tipos de componente y atributos: se sincronizan SIEMPRE (upsert),
+  // asi una base que ya tiene productos tambien recibe las categorias y atributos nuevos.
+  const categorias = {} as Record<NombreCategoria, number>;
+  for (const nombre of CATEGORIAS) {
+    const c = await prisma.categoria.upsert({ where: { nombre }, create: { nombre }, update: {} });
+    categorias[nombre] = c.idCategoria;
+  }
+
+  const tipos = {} as Record<TipoComponente, number>;
+  const atributos = {} as Record<TipoComponente, Record<string, number>>;
+  for (const [nombre, lista] of entries(atributosPorTipo)) {
+    const tipo = await prisma.tipoComponente.upsert({ where: { nombre }, create: { nombre }, update: {} });
+    tipos[nombre] = tipo.idTipoComponente;
+    atributos[nombre] = {};
+    for (const a of lista as readonly AtributoSeed[]) {
+      const datos = { unidad: a.unidad ?? null, numerico: a.numerico ?? false, opciones: [...(a.opciones ?? [])] };
+      const atributo = await prisma.atributoTecnico.upsert({
+        where: { idTipoComponente_nombre: { idTipoComponente: tipo.idTipoComponente, nombre: a.nombre } },
+        create: { idTipoComponente: tipo.idTipoComponente, nombre: a.nombre, ...datos },
+        update: datos,
+      });
+      atributos[nombre][a.nombre] = atributo.idAtributo;
+    }
+  }
+  console.log(`${CATEGORIAS.length} categorias y ${Object.keys(tipos).length} tipos de componente sincronizados.`);
+
+  // Marca por nombre: la crea si no existe
+  const marca = (nombre: string) => ({ connectOrCreate: { where: { nombre }, create: { nombre } } });
+
   // Catálogo: solo se crea si todavía no hay productos
   if ((await prisma.producto.count()) === 0) {
-    const categorias = {} as Record<NombreCategoria, number>;
-    for (const nombre of CATEGORIAS) {
-      const c = await prisma.categoria.create({ data: { nombre } });
-      categorias[nombre] = c.idCategoria;
-    }
-
-    const tipos = {} as Record<TipoComponente, number>;
-    const atributos = {} as Record<TipoComponente, Record<string, number>>;
-    for (const [nombre, lista] of entries(atributosPorTipo)) {
-      const tipo = await prisma.tipoComponente.create({
-        data: {
-          nombre,
-          atributos: {
-            create: lista.map(([n, unidad]) => ({ nombre: n, unidad })),
-          },
-        },
-        include: { atributos: true },
-      });
-      tipos[nombre] = tipo.idTipoComponente;
-      atributos[nombre] = Object.fromEntries(
-        tipo.atributos.map((a) => [a.nombre, a.idAtributo]),
-      );
-    }
 
     const idsPorNombre = {} as Record<NombreProducto, number>;
     for (const c of componentes) {
@@ -785,11 +1039,11 @@ async function main() {
         data: {
           nombre: c.nombre,
           descripcion: c.descripcion,
-          marca: c.marca,
+          marca: marca(c.marca),
           precio: c.precio,
           stock: c.stock,
-          imagenUrl: c.imagenUrl,
-          idCategoria: categorias[c.categoria],
+          imagenUrl: "imagenUrl" in c ? c.imagenUrl : null,
+          categoria: { connect: { idCategoria: categorias[c.categoria] } },
           componentePC: {
             create: {
               idTipoComponente: tipos[c.tipo],
@@ -797,7 +1051,7 @@ async function main() {
               valoresAtributo: {
                 create: Object.entries(c.valores).map(([atributo, valor]) => ({
                   idAtributo: atributos[c.tipo][atributo],
-                  valor,
+                  valor: valor as string,
                 })),
               },
             },
@@ -812,11 +1066,11 @@ async function main() {
         data: {
           nombre: p.nombre,
           descripcion: p.descripcion,
-          marca: p.marca,
+          marca: marca(p.marca),
           precio: p.precio,
           stock: p.stock,
           imagenUrl: p.imagenUrl,
-          idCategoria: categorias[p.categoria],
+          categoria: { connect: { idCategoria: categorias[p.categoria] } },
         },
       });
       idsPorNombre[p.nombre] = producto.idProducto;

@@ -13,11 +13,11 @@ datasource db {
 // no como enum de base de datos, para mantenerlos como String segun lo solicitado.
 // ─────────────────────────────────────────────
 model Usuario {
-  id     Int      @id @default(autoincrement()) @map("id_usuario")
-  nombreCompleto String   @map("nombre_completo")
-  correo         String   @unique @map("correo")
-  rol            String   @default("CLIENTE") @map("rol")
-  idIdioma       Int      @default(1) @map("id_idioma")
+  id             Int    @id @default(autoincrement()) @map("id_usuario")
+  nombreCompleto String @map("nombre_completo")
+  correo         String @unique @map("correo")
+  rol            String @default("CLIENTE") @map("rol")
+  idIdioma       Int    @default(1) @map("id_idioma")
 
   // Campos requeridos por Better Auth
   correoVerificado Boolean  @default(false) @map("correo_verificado")
@@ -34,7 +34,6 @@ model Usuario {
 
   idioma Idioma @relation(fields: [idIdioma], references: [idIdioma])
 
-
   carrito             Carrito?
   ventas              Venta[]
   solicitudesServicio SolicitudServicio[]
@@ -49,7 +48,6 @@ model Usuario {
 
   @@map("usuarios")
 }
-
 
 model Sesion {
   id            Int      @id @default(autoincrement()) @map("id_sesion")
@@ -96,6 +94,7 @@ model Verificacion {
 
   @@map("verificaciones")
 }
+
 model Idioma {
   idIdioma Int     @id @default(autoincrement()) @map("id_idioma")
   codigo   String  @unique @map("codigo")
@@ -119,17 +118,31 @@ model Categoria {
   @@map("categorias")
 }
 
+// Tabla propia para que no haya marcas repetidas con distinto formato ("Logitech" / "logitech")
+model Marca {
+  idMarca Int    @id @default(autoincrement()) @map("id_marca")
+  nombre  String @unique @map("nombre")
+
+  productos Producto[]
+
+  @@map("marcas")
+}
+
 model Producto {
   idProducto  Int     @id @default(autoincrement()) @map("id_producto")
   idCategoria Int     @map("id_categoria")
+  idMarca     Int     @map("id_marca")
   nombre      String  @map("nombre")
   descripcion String  @map("descripcion") // texto en el idioma base (espanol)
-  marca       String  @map("marca")
   precio      Decimal @map("precio") @db.Decimal(10, 2)
   stock       Int     @map("stock")
   imagenUrl   String? @map("imagen_url")
+  // Baja logica: un producto con ventas no se borra, se desactiva y deja de
+  // aparecer en el catalogo publico, pero sigue en el historial de ventas.
+  activo      Boolean @default(true) @map("activo")
 
   categoria Categoria @relation(fields: [idCategoria], references: [idCategoria])
+  marca     Marca     @relation(fields: [idMarca], references: [idMarca])
 
   componentePC  ComponentePC?
   itemsCarrito  ItemCarrito[]
@@ -171,10 +184,14 @@ model TipoComponente {
 
 // Que atributos tiene cada tipo de componente (socket, frecuencia, capacidad...)
 model AtributoTecnico {
-  idAtributo       Int     @id @default(autoincrement()) @map("id_atributo")
-  idTipoComponente Int     @map("id_tipo_componente")
-  nombre           String  @map("nombre")
-  unidad           String? @map("unidad") // null si no tiene unidad (ej. socket)
+  idAtributo       Int      @id @default(autoincrement()) @map("id_atributo")
+  idTipoComponente Int      @map("id_tipo_componente")
+  nombre           String   @map("nombre")
+  unidad           String?  @map("unidad") // null si no tiene unidad (ej. socket)
+  // numerico: el admin carga un numero (nucleos, GB...). Si no, texto con sugerencias.
+  numerico         Boolean  @default(false) @map("numerico")
+  // Valores tipicos que se sugieren al cargar el atributo (ej. AM4, AM5, LGA1700)
+  opciones         String[] @default([]) @map("opciones")
 
   tipoComponente TipoComponente  @relation(fields: [idTipoComponente], references: [idTipoComponente])
   valores        ValorAtributo[]
