@@ -13,11 +13,11 @@ datasource db {
 // no como enum de base de datos, para mantenerlos como String segun lo solicitado.
 // ─────────────────────────────────────────────
 model Usuario {
-  id             Int    @id @default(autoincrement()) @map("id_usuario")
-  nombreCompleto String @map("nombre_completo")
-  correo         String @unique @map("correo")
-  rol            String @default("CLIENTE") @map("rol")
-  idIdioma       Int    @default(1) @map("id_idioma")
+  id     Int      @id @default(autoincrement()) @map("id_usuario")
+  nombreCompleto String   @map("nombre_completo")
+  correo         String   @unique @map("correo")
+  rol            String   @default("CLIENTE") @map("rol")
+  idIdioma       Int      @default(1) @map("id_idioma")
 
   // Campos requeridos por Better Auth
   correoVerificado Boolean  @default(false) @map("correo_verificado")
