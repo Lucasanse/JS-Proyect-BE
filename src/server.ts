@@ -5,6 +5,7 @@ import { errorHandler } from "./middlewares/errorHandler";
 import { apiRouter } from "./routes";
 import { auth } from "./lib/auth";
 import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
+import { CARPETA_UPLOADS } from "./middlewares/subirImagen";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -22,6 +23,9 @@ app.use((req, _res, next) => {
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+// Imagenes de productos subidas por el admin: http://localhost:3000/uploads/xxx.webp
+app.use("/uploads", express.static(CARPETA_UPLOADS, { maxAge: "7d" }));
 
 app.use("/api", apiRouter);
 
