@@ -21,6 +21,7 @@ export const obtenerProductoPorId = async (
     where: { idProducto },
     include: {
       categoria: true,
+      marca: true,
       traducciones: {
         where: {
           idioma: {
@@ -36,13 +37,16 @@ export const obtenerProductoPorId = async (
             include: {
               atributo: true,
             },
+            // Mismo orden en que estan definidos los atributos del tipo
+            orderBy: { idAtributo: "asc" },
           },
         },
       },
     },
   });
 
-  if (!producto) {
+  // Un producto desactivado no se muestra en el catalogo publico
+  if (!producto || !producto.activo) {
     res.status(404).json({ error: "Producto no encontrado" });
     return;
   }
@@ -55,7 +59,7 @@ export const obtenerProductoPorId = async (
     descripcion: traduccion
       ? traduccion.descripcionTraducida
       : (producto.descripcion ?? ""),
-    marca: producto.marca,
+    marca: producto.marca.nombre,
     precio: Number(producto.precio),
     stock: producto.stock,
     imagenUrl: producto.imagenUrl,
