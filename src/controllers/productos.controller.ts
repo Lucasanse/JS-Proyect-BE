@@ -26,7 +26,9 @@ export async function listarProductos(
   } = listarProductosQuerySchema.parse(req.query);
 
   // Si buscan con ?q=, busca tanto en el nombre original como en la traducción del idioma activo
+  // El catalogo publico solo muestra productos activos
   const where: Prisma.ProductoWhereInput = {
+    activo: true,
     OR: q
       ? [
           { nombre: { contains: q, mode: "insensitive" } },
@@ -41,7 +43,7 @@ export async function listarProductos(
         ]
       : undefined,
     idCategoria: categoria,
-    marca: marca ? { equals: marca, mode: "insensitive" } : undefined,
+    marca: marca ? { nombre: { equals: marca, mode: "insensitive" } } : undefined,
     precio: { gte: precioMin, lte: precioMax },
     stock: conStock ? { gt: 0 } : undefined,
   };
@@ -74,11 +76,11 @@ export async function listarProductos(
 export async function listarMarcas(req: Request, res: Response<string[]>) {
   const { categoria } = listarMarcasQuerySchema.parse(req.query);
 
-  const marcas = await prisma.producto.findMany({
-    where: { idCategoria: categoria },
-    distinct: ["marca"],
-    select: { marca: true },
-    orderBy: { marca: "asc" },
+  // Solo marcas con algun producto activo (de la categoria, si viene)
+  const marcas = await prisma.marca.findMany({
+    where: { productos: { some: { idCategoria: categoria, activo: true } } },
+    select: { nombre: true },
+    orderBy: { nombre: "asc" },
   });
-  res.json(marcas.map((m) => m.marca));
+  res.json(marcas.map((m) => m.nombre));
 }

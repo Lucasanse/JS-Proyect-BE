@@ -56,6 +56,49 @@ export type ProductoResumen = ProductoComun &
     | { esComponentePC: false; tipoComponente: null }
   );
 
+// /api/admin/productos: incluye los inactivos y la traduccion al ingles para editarla
+export interface ProductoAdmin {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  marca: { id: number; nombre: string };
+  precio: number;
+  stock: number;
+  imagenUrl: string | null;
+  activo: boolean;
+  categoria: CategoriaResumen;
+  traduccionEn: { nombre: string; descripcion: string } | null;
+  // null = no es un componente de PC
+  componente: {
+    idTipoComponente: number;
+    tipo: string;
+    wattsRequeridos: number;
+    atributos: { idAtributo: number; valor: string }[];
+  } | null;
+}
+
+// GET /api/admin/marcas. categorias = ids de las categorias donde la marca tiene productos
+export interface MarcaAdmin {
+  id: number;
+  nombre: string;
+  categorias: number[];
+}
+
+// GET /api/admin/tipos-componente
+export interface TipoComponenteAdmin {
+  id: number;
+  nombre: string;
+  // Categorias donde ya hay componentes de este tipo (para sugerir el tipo al elegir la categoria)
+  categorias: number[];
+  atributos: {
+    id: number;
+    nombre: string;
+    unidad: string | null;
+    numerico: boolean;
+    opciones: string[]; // las del seed + los valores que ya se cargaron
+  }[];
+}
+
 // GET /api/carrito
 export interface ItemCarritoDetalle {
   producto: ProductoResumen;

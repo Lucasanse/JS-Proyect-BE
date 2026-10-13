@@ -17,6 +17,7 @@ async function obtenerOCrearCarrito(idUsuario: number) {
 async function buscarProducto(idProducto: number) {
   const producto = await prisma.producto.findUnique({ where: { idProducto } });
   if (!producto) throw new AppError(404, 'Producto no encontrado');
+  if (!producto.activo) throw new AppError(400, 'El producto ya no está disponible');
   return producto;
 }
 

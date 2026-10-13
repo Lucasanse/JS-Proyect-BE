@@ -8,6 +8,7 @@ import type { ProductoResumen } from "./catalogo.types";
 export const crearIncludeResumen = (codigoIdioma: string = "es") =>
   ({
     categoria: true,
+    marca: true,
     componentePC: { select: { tipoComponente: { select: { nombre: true } } } },
     traducciones: {
       where: {
@@ -40,7 +41,7 @@ export function mapearResumen(p: ProductoConResumen): ProductoResumen {
     id: p.idProducto,
     nombre: traduccion ? traduccion.nombreTraducido : p.nombre,
     descripcion: traduccion ? traduccion.descripcionTraducida : p.descripcion,
-    marca: p.marca,
+    marca: p.marca.nombre,
     precio: p.precio.toNumber(),
     stock: p.stock,
     imagenUrl: p.imagenUrl,
