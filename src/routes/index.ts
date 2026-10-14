@@ -6,8 +6,9 @@ import * as carrito from "../controllers/carrito.controller";
 import * as idioma from "../controllers/idioma.controller";
 import * as adminProductos from "../controllers/adminProductos.controller";
 import * as adminCatalogo from "../controllers/adminCatalogo.controller";
+import * as analisisIA from "../controllers/analisisIA.controller";
 import { requireAdmin, requireAuth } from "../middlewares/auth";
-import { subirImagen } from "../middlewares/subirImagen";
+import { subirFotosIA, subirImagen } from "../middlewares/subirImagen";
 
 export const apiRouter = Router();
 
@@ -28,6 +29,10 @@ apiRouter.patch("/carrito/items/:idProducto", requireAuth, carrito.modificarCant
 apiRouter.delete("/carrito/items/:idProducto", requireAuth, carrito.quitarItem);
 apiRouter.delete("/carrito", requireAuth, carrito.vaciarCarrito);
 
+// Fotos desde el celular (QR del formulario de productos). Sin sesion: el token hace de permiso.
+apiRouter.get("/captura/:token", analisisIA.infoCaptura);
+apiRouter.post("/captura/:token/fotos", subirFotosIA, analisisIA.subirFotosCaptura);
+
 // Administracion (solo rol ADMIN: sin sesion -> 401, otro rol -> 403)
 const adminRouter = Router();
 adminRouter.use(requireAuth, requireAdmin);
@@ -35,6 +40,7 @@ adminRouter.use(requireAuth, requireAdmin);
 adminRouter.get("/productos", adminProductos.listarProductosAdmin);
 adminRouter.post("/productos", adminProductos.crearProducto);
 adminRouter.post("/productos/imagen", subirImagen, adminProductos.subirImagenProducto);
+adminRouter.post("/productos/analizar", subirFotosIA, analisisIA.analizarFotosProducto);
 adminRouter.get("/productos/:id", adminProductos.obtenerProductoAdmin);
 adminRouter.put("/productos/:id", adminProductos.actualizarProducto);
 adminRouter.patch("/productos/:id", adminProductos.actualizarProducto);
@@ -45,5 +51,11 @@ adminRouter.patch("/productos/:id/estado", adminProductos.cambiarEstadoProducto)
 adminRouter.get("/marcas", adminCatalogo.listarMarcasAdmin);
 adminRouter.post("/marcas", adminCatalogo.crearMarca);
 adminRouter.get("/tipos-componente", adminCatalogo.listarTiposComponente);
+
+// Captura de fotos desde el celular (QR) para analizarlas con IA
+adminRouter.post("/captura", analisisIA.crearCapturaFotos);
+adminRouter.get("/captura/:token", analisisIA.estadoCaptura);
+adminRouter.get("/captura/:token/fotos/:indice", analisisIA.fotoCaptura);
+adminRouter.delete("/captura/:token", analisisIA.cancelarCaptura);
 
 apiRouter.use("/admin", adminRouter);
