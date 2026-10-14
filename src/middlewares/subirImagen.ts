@@ -35,6 +35,21 @@ export const subirImagen = multer({
   },
 }).single("imagen");
 
+// Fotos para analizar con IA (campo "fotos", hasta MAX_FOTOS_IA). Quedan en memoria y no
+// se guardan en disco: solo se usan para el análisis. Son los formatos que acepta Gemini.
+export const MAX_FOTOS_IA = 5;
+
+const FORMATOS_IA = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
+
+export const subirFotosIA = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_MB_IMAGEN * 1024 * 1024, files: MAX_FOTOS_IA },
+  fileFilter: (_req, file, cb) => {
+    if (FORMATOS_IA.has(file.mimetype)) cb(null, true);
+    else cb(new AppError(400, "Formato de foto no permitido. Usá JPG, PNG, WEBP o HEIC"));
+  },
+}).array("fotos", MAX_FOTOS_IA);
+
 // Si la URL apunta a una imagen subida a este servidor, devuelve la ruta del archivo.
 // Las URLs externas (pegadas a mano por el admin) devuelven null.
 function archivoLocalDe(url: string | null | undefined): string | null {
