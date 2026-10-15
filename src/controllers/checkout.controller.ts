@@ -7,7 +7,7 @@ const cliente = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN!,
 });
 export async function crearOrdenCarrito(req: Request, res: Response) {
-  const idUsuario = Number(req.usuario!.id);
+  const idUsuario = Number(req.body.usuario!.id);
   const Idcarrito = await obtenerOCrearCarrito(idUsuario);
   const carrito = await detalleCarrito(Idcarrito.idCarrito);
 
@@ -24,12 +24,14 @@ export async function crearOrdenCarrito(req: Request, res: Response) {
     body: {
       items: productos,
       back_urls: {
-        success: "http://localhost:5173/checkout/exito",
-        failure: "http://localhost:5173/checkout/error",
-        pending: "http://localhost:5173/checkout/pendiente",
+        success: "https://agency-amino-angelic.ngrok-free.dev/checkout/exito",
+        failure: "https://agency-amino-angelic.ngrok-free.dev/checkout/error",
+        pending:
+          "https://agency-amino-angelic.ngrok-free.dev/checkout/pendiente",
       },
       auto_return: "approved",
-      notification_url: "https://tu-dominio.com/api/webhooks/mercadopago",
+      notification_url:
+        "https://agency-amino-angelic.ngrok-free.dev/api/webhooks/mercadopago",
       external_reference: idUsuario.toString(),
     },
   });

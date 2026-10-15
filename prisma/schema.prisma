@@ -258,7 +258,8 @@ model Venta {
   fecha     DateTime @default(now()) @map("fecha")
   total     Decimal  @map("total") @db.Decimal(10, 2)
   estado    String   @default("PENDIENTE") @map("estado")
-
+idPagoMp          String?  @unique @map("id_pago_mp") 
+  metodoPago        String   @default("MERCADO_PAGO") @map("metodo_pago")
   usuario        Usuario        @relation(fields: [idUsuario], references: [id])
   detalles       DetalleVenta[]
   factura        Factura?
