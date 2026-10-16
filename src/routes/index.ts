@@ -8,7 +8,10 @@ import * as adminProductos from "../controllers/adminProductos.controller";
 import * as adminCatalogo from "../controllers/adminCatalogo.controller";
 import { requireAdmin, requireAuth } from "../middlewares/auth";
 import { subirImagen } from "../middlewares/subirImagen";
-import { crearOrdenCarrito } from "../controllers/checkout.controller";
+import {
+  crearOrdenCarrito,
+  crearOrdenPorUnidad,
+} from "../controllers/checkout.controller";
 import { recibidorDeWebHookMP } from "../controllers/webhooks.controller";
 
 export const apiRouter = Router();
@@ -36,7 +39,8 @@ apiRouter.delete("/carrito", requireAuth, carrito.vaciarCarrito);
 
 //Compra
 //Agregar el auth cuando se termine con las pruebas.
-apiRouter.post("/checkout", crearOrdenCarrito);
+apiRouter.post("/checkout/carrito", crearOrdenCarrito);
+apiRouter.post("/checkout/unidad", crearOrdenPorUnidad);
 
 apiRouter.post("/webhooks/mercadopago", recibidorDeWebHookMP);
 
