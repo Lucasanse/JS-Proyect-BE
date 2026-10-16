@@ -1,11 +1,79 @@
+import { error } from "node:console";
 import { prisma } from "../utils/prisma";
+
+export async function procesarCompraAprobadaUnidad(
+  idUsuario: number,
+  idPagoMP: string,
+  idProducto: number,
+  cantidad: number,
+) {
+  return await prisma.$transaction(async (tx) => {
+    //Esto lo hacemos pq MP tira muchos avisos y esto hace que quede limpio y sin que se duplique
+    const ventaExistente = await tx.venta.findUnique({
+      where: { idPagoMp: idPagoMP },
+    });
+
+    if (ventaExistente) {
+      console.log(
+        `El pago ${idPagoMP} del carrito ya fue procesado. Ignorando duplicado.`,
+      );
+      return ventaExistente;
+    }
+    const producto = await tx.producto.findUnique({
+      where: {
+        idProducto: idProducto,
+      },
+    });
+    if (!producto) {
+      throw new Error(
+        "El producto no existe o hubo un error en la transaccion del sistema",
+      );
+    }
+    //Creamos lo que va en detalleVenta
+    let totalVenta = Number(producto.precio) * cantidad;
+
+    const nuevaVenta = await tx.venta.create({
+      data: {
+        idUsuario,
+        total: totalVenta,
+        estado: "Pagado",
+        idPagoMp: idPagoMP,
+        detalles: {
+          create: {
+            idProducto: idProducto,
+            cantidad: cantidad,
+            precioUnitario: producto.precio,
+          },
+        },
+      },
+    });
+    await tx.producto.update({
+      where: { idProducto: idProducto },
+      data: { stock: { decrement: cantidad } },
+    });
+    return nuevaVenta;
+  });
+}
 
 export async function procesarCompraAprobadaCarrito(
   idUsuario: number,
   idPagoMP: string,
 ) {
   return await prisma.$transaction(async (tx) => {
+    //Esto lo hacemos pq MP tira muchos avisos y esto hace que quede limpio y sin que se duplique
+    const ventaExistente = await tx.venta.findUnique({
+      where: { idPagoMp: idPagoMP },
+    });
+
+    if (ventaExistente) {
+      console.log(
+        `El pago ${idPagoMP} del carrito ya fue procesado. Ignorando duplicado.`,
+      );
+      return ventaExistente;
+    }
+
     //Aca traemos todo el carrito
+
     const carrito = await tx.carrito.findUnique({
       where: { idUsuario },
       include: { items: { include: { producto: true } } },
