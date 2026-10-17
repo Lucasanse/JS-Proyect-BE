@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { MulterError } from 'multer';
 import { AppError } from '../utils/AppError';
-import { MAX_MB_IMAGEN } from './subirImagen';
+import { MAX_FOTOS_IA, MAX_MB_IMAGEN } from './subirImagen';
 
 // Middleware global de errores: cualquier error lanzado en una ruta termina aca.
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
@@ -21,8 +21,13 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
 
   // Errores de la subida de imagenes (archivo muy grande, mas de un archivo, etc.)
   if (err instanceof MulterError) {
+    const demasiadasFotos = err.code === 'LIMIT_FILE_COUNT' || (err.code === 'LIMIT_UNEXPECTED_FILE' && err.field === 'fotos');
     const mensaje =
-      err.code === 'LIMIT_FILE_SIZE' ? `La imagen no puede superar los ${MAX_MB_IMAGEN} MB` : 'No se pudo subir la imagen';
+      err.code === 'LIMIT_FILE_SIZE'
+        ? `La imagen no puede superar los ${MAX_MB_IMAGEN} MB`
+        : demasiadasFotos
+          ? `Podés mandar hasta ${MAX_FOTOS_IA} fotos`
+          : 'No se pudo subir la imagen';
     return res.status(400).json({ error: mensaje });
   }
 
