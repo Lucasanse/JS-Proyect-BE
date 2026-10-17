@@ -131,8 +131,7 @@ export function esquemaRespuestaIA(c: CatalogoIA): object {
   };
 }
 
-// Respuesta de la IA tal como llega. Es permisiva a proposito: lo que venga mal se
-// descarta campo por campo en vez de perder todo el analisis.
+// Respuesta de la IA tal como llega. Es permisiva a proposito: lo que venga mal se descarta campo por campo en vez de perder todo el analisis.
 const textoIA = z.string().nullish().catch(null);
 const respuestaIASchema = z.object({
   nombre: textoIA,
