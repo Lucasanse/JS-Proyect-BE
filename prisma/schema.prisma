@@ -37,6 +37,8 @@ model Usuario {
   carrito             Carrito?
   ventas              Venta[]
   solicitudesServicio SolicitudServicio[]
+  respuestasSolicitud RespuestaSolicitud[]
+  cambiosEstado       HistorialEstadoSolicitud[]
   notificaciones      Notificacion[]
   presets             Preset[]
   favoritos           Favorito[]
@@ -292,18 +294,64 @@ model Factura {
   @@map("facturas")
 }
 
+// Estados posibles y transiciones validas: src/utils/servicioTecnico.estados.ts
+// Tipos de servicio, equipos y software: src/utils/servicioTecnico.catalogo.ts
 model SolicitudServicio {
-  idSolicitud   Int      @id @default(autoincrement()) @map("id_solicitud")
-  idUsuario     Int      @map("id_usuario")
-  descripcion   String   @map("descripcion")
-  diagnosticoIA String?  @map("diagnostico_ia")
-  estado        String   @default("PENDIENTE") @map("estado")
-  fecha         DateTime @default(now()) @map("fecha")
+  idSolicitud     Int      @id @default(autoincrement()) @map("id_solicitud")
+  idUsuario       Int      @map("id_usuario")
+  servicios       String[] @map("servicios") // uno o varios: REPARACION, LIMPIEZA, FORMATEO...
+  tipoEquipo      String?  @map("tipo_equipo") // solo con REPARACION: PC_FIJA, NOTEBOOK o IMPRESORA
+  software        String[] @default([]) @map("software") // solo con INSTALACION_SOFTWARE: WIN10, OFFICE...
+  conBackup       Boolean  @default(false) @map("con_backup") // solo con FORMATEO: backup antes de formatear
+  conPastaTermica Boolean  @default(false) @map("con_pasta_termica") // solo con LIMPIEZA: cambio de pasta termica
+  // Que le sucede al equipo / comentarios. Obligatoria con REPARACION u OTRO.
+  descripcion     String?  @map("descripcion")
+  diagnosticoIA   String?  @map("diagnostico_ia")
+  estado          String   @default("PENDIENTE") @map("estado")
+  fecha           DateTime @default(now()) @map("fecha")
+  // Ultima respuesta o cambio de estado (para ordenar y mostrar "actualizada hace...")
+  actualizadoEn   DateTime @default(now()) @updatedAt @map("actualizado_en")
 
-  usuario        Usuario        @relation(fields: [idUsuario], references: [id])
+  usuario        Usuario                    @relation(fields: [idUsuario], references: [id])
   notificaciones Notificacion[]
+  respuestas     RespuestaSolicitud[]
+  historial      HistorialEstadoSolicitud[]
 
+  @@index([estado])
+  @@index([idUsuario])
   @@map("solicitudes_servicio")
+}
+
+// Mensajes del admin al cliente sobre una solicitud
+model RespuestaSolicitud {
+  idRespuesta Int      @id @default(autoincrement()) @map("id_respuesta")
+  idSolicitud Int      @map("id_solicitud")
+  idUsuario   Int      @map("id_usuario") // admin que respondio
+  mensaje     String   @map("mensaje")
+  fecha       DateTime @default(now()) @map("fecha")
+
+  solicitud SolicitudServicio @relation(fields: [idSolicitud], references: [idSolicitud], onDelete: Cascade)
+  usuario   Usuario           @relation(fields: [idUsuario], references: [id])
+
+  @@index([idSolicitud])
+  @@map("respuestas_solicitud")
+}
+
+// Cada cambio de estado de una solicitud. El primero (estadoAnterior null) es la
+// creacion por parte del cliente; los demas los hace un admin.
+model HistorialEstadoSolicitud {
+  idHistorial    Int      @id @default(autoincrement()) @map("id_historial")
+  idSolicitud    Int      @map("id_solicitud")
+  idUsuario      Int      @map("id_usuario") // quien hizo el cambio
+  estadoAnterior String?  @map("estado_anterior")
+  estadoNuevo    String   @map("estado_nuevo")
+  fecha          DateTime @default(now()) @map("fecha")
+
+  solicitud SolicitudServicio @relation(fields: [idSolicitud], references: [idSolicitud], onDelete: Cascade)
+  usuario   Usuario           @relation(fields: [idUsuario], references: [id])
+
+  @@index([idSolicitud])
+  @@map("historial_estados_solicitud")
 }
 
 // Codigo y plantilla del mensaje de cada tipo de notificacion
