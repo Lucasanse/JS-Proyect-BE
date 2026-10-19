@@ -305,6 +305,7 @@ model SolicitudServicio {
   software        String[] @default([]) @map("software") // solo con INSTALACION_SOFTWARE: WIN10, OFFICE...
   conBackup       Boolean  @default(false) @map("con_backup") // solo con FORMATEO: backup antes de formatear
   conPastaTermica Boolean  @default(false) @map("con_pasta_termica") // solo con LIMPIEZA: cambio de pasta termica
+  conSSD          Boolean  @default(false) @map("con_ssd") // solo con OPTIMIZACION: cambiar el disco duro por un SSD
   // Que le sucede al equipo / comentarios. Obligatoria con REPARACION u OTRO.
   descripcion     String?  @map("descripcion")
   diagnosticoIA   String?  @map("diagnostico_ia")

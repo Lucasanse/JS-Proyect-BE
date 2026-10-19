@@ -17,6 +17,7 @@ export interface SolicitudResumen {
   software: Software[]; // solo con INSTALACION_SOFTWARE
   conBackup: boolean; // solo con FORMATEO
   conPastaTermica: boolean; // solo con LIMPIEZA
+  conSSD: boolean; // solo con OPTIMIZACION
   descripcion: string | null;
   estado: EstadoSolicitud;
   fecha: Date;

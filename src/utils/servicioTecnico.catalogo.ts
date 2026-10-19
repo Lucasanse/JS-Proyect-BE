@@ -2,8 +2,16 @@
 // Se guardan como String en la base; los valores validos son estos.
 
 // Se pueden pedir varios en la misma solicitud. El backup no es un servicio aparte:
-// se pide como opcion del formateo (conBackup).
-export const TIPOS_SERVICIO = ["REPARACION", "LIMPIEZA", "FORMATEO", "INSTALACION_SOFTWARE", "OTRO"] as const;
+// se pide como opcion del formateo (conBackup). Lo mismo el SSD con OPTIMIZACION (conSSD).
+// LIMPIEZA es la limpieza externa del equipo. OPTIMIZACION: que la computadora ande mas rapido.
+export const TIPOS_SERVICIO = [
+  "REPARACION",
+  "LIMPIEZA",
+  "FORMATEO",
+  "OPTIMIZACION",
+  "INSTALACION_SOFTWARE",
+  "OTRO",
+] as const;
 export type TipoServicio = (typeof TIPOS_SERVICIO)[number];
 
 // Solo para REPARACION: que equipo hay que reparar
