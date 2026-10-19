@@ -19,76 +19,37 @@ import { cambiarEstadoSchema, crearSolicitudSchema } from "../validations/servic
 const esError409 = (e: unknown) => e instanceof AppError && e.statusCode === 409;
 
 describe("transiciones de estado", () => {
-  it("el flujo normal se puede recorrer de punta a punta", () => {
-    const flujo = ["PENDIENTE", "ESPERANDO_EQUIPO", "EN_REVISION", "EN_REPARACION", "RESUELTA", "CERRADA"] as const;
-    for (let i = 1; i < flujo.length; i++) {
-      assert.doesNotThrow(() => validarTransicion(flujo[i - 1], flujo[i]), `${flujo[i - 1]} -> ${flujo[i]}`);
-    }
-  });
-
-  it("se puede cerrar desde cualquier estado que no sea final", () => {
-    for (const estado of ESTADOS_SOLICITUD.filter((e) => !ESTADOS_FINALES.includes(e))) {
-      assert.ok(puedeTransicionar(estado, "CERRADA"), `${estado} -> CERRADA`);
-    }
-  });
-
-  it("RECHAZADA y CERRADA son finales", () => {
-    for (const final of ESTADOS_FINALES) {
-      assert.deepEqual(transicionesDesde(final), []);
-      for (const estado of ESTADOS_SOLICITUD) {
-        assert.throws(() => validarTransicion(final, estado), esError409, `${final} -> ${estado}`);
+  it("se puede pasar de cualquier estado a cualquier otro, sin orden", () => {
+    for (const desde of ESTADOS_SOLICITUD) {
+      for (const hacia of ESTADOS_SOLICITUD.filter((e) => e !== desde)) {
+        assert.doesNotThrow(() => validarTransicion(desde, hacia), `${desde} -> ${hacia}`);
       }
     }
   });
 
-  it("se puede rechazar mientras el trabajo no este terminado", () => {
-    for (const estado of ["PENDIENTE", "ESPERANDO_EQUIPO", "EN_REVISION", "EN_REPARACION"] as const) {
-      assert.doesNotThrow(() => validarTransicion(estado, "RECHAZADA"), `${estado} -> RECHAZADA`);
-    }
-    assert.throws(() => validarTransicion("RESUELTA", "RECHAZADA"), esError409);
-  });
-
-  it("no se puede saltear la revision", () => {
-    assert.throws(() => validarTransicion("PENDIENTE", "EN_REPARACION"), esError409);
-    assert.throws(() => validarTransicion("PENDIENTE", "RESUELTA"), esError409);
-  });
-
-  it("no se puede volver a PENDIENTE", () => {
-    for (const estado of ESTADOS_SOLICITUD) {
-      assert.equal(puedeTransicionar(estado, "PENDIENTE"), false, `${estado} -> PENDIENTE`);
-    }
-  });
-
-  it("cuando llega el equipo se revisa o se repara directo", () => {
-    assert.ok(puedeTransicionar("ESPERANDO_EQUIPO", "EN_REVISION"));
-    assert.ok(puedeTransicionar("ESPERANDO_EQUIPO", "EN_REPARACION"));
-    assert.equal(puedeTransicionar("ESPERANDO_EQUIPO", "RESUELTA"), false);
-    assert.ok(puedeTransicionar("EN_REVISION", "ESPERANDO_EQUIPO")); // se reviso a distancia y hace falta el equipo
-  });
-
-  it("se puede volver atras donde tiene sentido", () => {
-    assert.ok(puedeTransicionar("EN_REPARACION", "EN_REVISION"));
-    assert.ok(puedeTransicionar("RESUELTA", "EN_REPARACION")); // el equipo volvio a fallar
+  it("se puede saltear pasos, volver atras y reabrir", () => {
+    assert.ok(puedeTransicionar("PENDIENTE", "RESUELTA"));
+    assert.ok(puedeTransicionar("RESUELTA", "PENDIENTE"));
+    assert.ok(puedeTransicionar("CERRADA", "EN_REVISION"));
+    assert.ok(puedeTransicionar("RECHAZADA", "PENDIENTE"));
   });
 
   it("pasar al mismo estado es un error", () => {
     for (const estado of ESTADOS_SOLICITUD) {
       assert.throws(() => validarTransicion(estado, estado), esError409);
+      assert.equal(transicionesDesde(estado).includes(estado), false, estado);
     }
   });
 
-  it("un estado desconocido en la base no permite ninguna transicion", () => {
+  it("un estado desconocido en la base se puede corregir pasandolo a cualquiera valido", () => {
     assert.equal(esEstadoSolicitud("ENVIADA"), false);
-    assert.deepEqual(transicionesDesde("ENVIADA"), []);
-    assert.throws(() => validarTransicion("ENVIADA", "CERRADA"), esError409);
+    assert.deepEqual(transicionesDesde("ENVIADA"), ESTADOS_SOLICITUD);
+    assert.doesNotThrow(() => validarTransicion("ENVIADA", "PENDIENTE"));
   });
 
-  it("todas las transiciones apuntan a estados validos y nunca al mismo", () => {
-    for (const [desde, destinos] of Object.entries(TRANSICIONES)) {
-      for (const hacia of destinos) {
-        assert.ok(esEstadoSolicitud(hacia));
-        assert.notEqual(desde, hacia);
-      }
+  it("todas las transiciones apuntan a estados validos", () => {
+    for (const destinos of Object.values(TRANSICIONES)) {
+      for (const hacia of destinos) assert.ok(esEstadoSolicitud(hacia));
     }
   });
 
@@ -169,8 +130,19 @@ describe("datos de la solicitud segun los servicios elegidos", () => {
       software: ["WIN11", "OFFICE"],
       conBackup: true,
       conPastaTermica: true,
+      conSSD: false,
       descripcion: null,
     });
+  });
+
+  it("optimizacion: se puede pedir el cambio a SSD, que va solo con ese servicio", () => {
+    assert.equal(crearSolicitudSchema.parse({ servicios: ["OPTIMIZACION"] }).conSSD, false);
+    assert.equal(crearSolicitudSchema.parse({ servicios: ["OPTIMIZACION"], conSSD: true }).conSSD, true);
+    assert.equal(crearSolicitudSchema.parse({ servicios: ["LIMPIEZA"], conSSD: true }).conSSD, false);
+    assert.deepEqual(crearSolicitudSchema.parse({ servicios: ["OPTIMIZACION", "LIMPIEZA"] }).servicios, [
+      "LIMPIEZA",
+      "OPTIMIZACION",
+    ]);
   });
 
   it("pide al menos un servicio, sin repetidos ni desconocidos", () => {
@@ -189,6 +161,7 @@ describe("datos de la solicitud segun los servicios elegidos", () => {
       software: ["VLC"], // no pidio instalacion: se descarta
       conBackup: true, // no pidio formateo: se descarta
       conPastaTermica: true, // no pidio limpieza: se descarta
+      conSSD: true, // no pidio optimizacion: se descarta
     });
     assert.deepEqual(ok, {
       servicios: ["REPARACION"],
@@ -196,6 +169,7 @@ describe("datos de la solicitud segun los servicios elegidos", () => {
       software: [],
       conBackup: false,
       conPastaTermica: false,
+      conSSD: false,
       descripcion: "No enciende desde ayer",
     });
     assert.equal(valida({ servicios: ["REPARACION"], descripcion: "No enciende desde ayer" }), false);

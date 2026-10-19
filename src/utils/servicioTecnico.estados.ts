@@ -16,25 +16,15 @@ export const ESTADOS_SOLICITUD = [
 
 export type EstadoSolicitud = (typeof ESTADOS_SOLICITUD)[number];
 
-// A que estados se puede pasar desde cada uno.
-// - Se puede cerrar en cualquier momento (ej. el cliente desiste).
-// - Cuando llega el equipo se revisa, o se repara directo si el problema ya estaba claro.
-// - Desde EN_REVISION se puede pedir el equipo si se empezo a revisar a distancia.
-// - Desde EN_REPARACION se puede volver a EN_REVISION si hace falta otro diagnostico.
-// - Una RESUELTA se puede reabrir (EN_REPARACION) si el equipo vuelve a fallar.
-// - Se puede rechazar mientras el trabajo no este terminado (hasta EN_REPARACION).
-// - RECHAZADA y CERRADA son finales.
-export const TRANSICIONES: Record<EstadoSolicitud, readonly EstadoSolicitud[]> = {
-  PENDIENTE: ["ESPERANDO_EQUIPO", "EN_REVISION", "RECHAZADA", "CERRADA"],
-  ESPERANDO_EQUIPO: ["EN_REVISION", "EN_REPARACION", "RECHAZADA", "CERRADA"],
-  EN_REVISION: ["ESPERANDO_EQUIPO", "EN_REPARACION", "RESUELTA", "RECHAZADA", "CERRADA"],
-  EN_REPARACION: ["EN_REVISION", "RESUELTA", "RECHAZADA", "CERRADA"],
-  RESUELTA: ["EN_REPARACION", "CERRADA"],
-  RECHAZADA: [],
-  CERRADA: [],
-};
+// El admin puede pasar la solicitud al estado que quiera, sin seguir un orden
+// (ej. reabrir una cerrada o volver a pendiente). Lo unico que no se puede es "pasar" al mismo estado.
+export const TRANSICIONES = {} as Record<EstadoSolicitud, readonly EstadoSolicitud[]>;
+for (const desde of ESTADOS_SOLICITUD) {
+  TRANSICIONES[desde] = ESTADOS_SOLICITUD.filter((hacia) => hacia !== desde);
+}
 
-// Estados que ya no cambian ni aceptan respuestas
+// Estados que terminan la solicitud: mientras este en uno de estos no acepta respuestas
+// (para responder hay que reabrirla cambiandole el estado).
 export const ESTADOS_FINALES: readonly EstadoSolicitud[] = ["RECHAZADA", "CERRADA"];
 
 export const ESTADO_INICIAL: EstadoSolicitud = "PENDIENTE";
@@ -42,26 +32,18 @@ export const ESTADO_INICIAL: EstadoSolicitud = "PENDIENTE";
 export const esEstadoSolicitud = (valor: string): valor is EstadoSolicitud =>
   (ESTADOS_SOLICITUD as readonly string[]).includes(valor);
 
-// Estados a los que se puede pasar desde "actual" (vacio si es final o desconocido)
+// Estados a los que se puede pasar desde "actual". Si en la base quedo un estado que ya no existe,
+// se puede pasar a cualquiera de los validos para corregirlo.
 export const transicionesDesde = (actual: string): readonly EstadoSolicitud[] =>
-  esEstadoSolicitud(actual) ? TRANSICIONES[actual] : [];
+  esEstadoSolicitud(actual) ? TRANSICIONES[actual] : ESTADOS_SOLICITUD;
 
 export const puedeTransicionar = (desde: string, hacia: string) =>
   (transicionesDesde(desde) as readonly string[]).includes(hacia);
 
-// Las solicitudes rechazadas o cerradas ya no se pueden responder
+// Las solicitudes rechazadas o cerradas no se pueden responder
 export const aceptaRespuestas = (estado: string) => !(ESTADOS_FINALES as readonly string[]).includes(estado);
 
-// Lanza 409 si el cambio de estado no esta permitido
+// Lanza 409 si el cambio de estado no esta permitido (solo pasa si ya esta en ese estado)
 export function validarTransicion(desde: string, hacia: EstadoSolicitud) {
-  if (desde === hacia) throw new AppError(409, "La solicitud ya está en ese estado");
-  if (!puedeTransicionar(desde, hacia)) {
-    const posibles = transicionesDesde(desde);
-    throw new AppError(
-      409,
-      posibles.length === 0
-        ? `La solicitud está ${desde} y ya no se puede cambiar de estado`
-        : `No se puede pasar de ${desde} a ${hacia}. Estados posibles: ${posibles.join(", ")}`,
-    );
-  }
+  if (!puedeTransicionar(desde, hacia)) throw new AppError(409, "La solicitud ya está en ese estado");
 }

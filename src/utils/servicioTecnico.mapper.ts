@@ -30,6 +30,7 @@ export function mapearResumenSolicitud(s: SolicitudConResumen): SolicitudResumen
     software: s.software as Software[],
     conBackup: s.conBackup,
     conPastaTermica: s.conPastaTermica,
+    conSSD: s.conSSD,
     descripcion: s.descripcion,
     estado: s.estado as EstadoSolicitud,
     fecha: s.fecha,

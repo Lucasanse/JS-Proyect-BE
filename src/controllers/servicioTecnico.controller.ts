@@ -15,7 +15,7 @@ import { crearSolicitudSchema, idSolicitudParamSchema } from "../validations/ser
 // Better Auth devuelve el id como string; en la base es Int.
 const idUsuarioDe = (req: Request) => Number(req.usuario!.id);
 
-// POST /api/servicio-tecnico  { servicios, tipoEquipo?, software?, conBackup?, conPastaTermica?, descripcion? }
+// POST /api/servicio-tecnico  { servicios, tipoEquipo?, software?, conBackup?, conPastaTermica?, conSSD?, descripcion? }
 // (que campos van segun los servicios elegidos: ver crearSolicitudSchema)
 // Queda en PENDIENTE y se registra como primer evento del historial.
 export async function crearSolicitud(req: Request, res: Response<SolicitudDetalle>) {

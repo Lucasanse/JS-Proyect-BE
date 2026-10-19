@@ -31,8 +31,9 @@ const softwareSchema = z
 // El cliente puede pedir varios servicios juntos (ej. limpieza + formateo + instalacion).
 // Segun lo que elija se piden mas datos:
 // - REPARACION: que equipo es (PC fija, notebook o impresora) y que le sucede (obligatorio)
-// - LIMPIEZA: si quiere que ademas se cambie la pasta termica
+// - LIMPIEZA (externa): si quiere que ademas se cambie la pasta termica
 // - FORMATEO: si quiere un backup de sus archivos antes de formatear
+// - OPTIMIZACION: si quiere que se cambie el disco duro por un SSD
 // - INSTALACION_SOFTWARE: que programas instalar (al menos uno, un solo Windows)
 // - OTRO: que necesita (obligatorio)
 // La descripcion es opcional si no hay REPARACION ni OTRO.
@@ -49,6 +50,7 @@ export const crearSolicitudSchema = z
     software: softwareSchema.default([]),
     conBackup: z.boolean({ error: "conBackup debe ser true o false" }).default(false),
     conPastaTermica: z.boolean({ error: "conPastaTermica debe ser true o false" }).default(false),
+    conSSD: z.boolean({ error: "conSSD debe ser true o false" }).default(false),
     descripcion: z.string().trim().max(MAX_DESCRIPCION, `Máximo ${MAX_DESCRIPCION} caracteres`).nullish(),
   })
   .superRefine((d, ctx) => {
@@ -82,6 +84,7 @@ export const crearSolicitudSchema = z
     software: d.servicios.includes("INSTALACION_SOFTWARE") ? d.software : [],
     conBackup: d.servicios.includes("FORMATEO") && d.conBackup,
     conPastaTermica: d.servicios.includes("LIMPIEZA") && d.conPastaTermica,
+    conSSD: d.servicios.includes("OPTIMIZACION") && d.conSSD,
     descripcion: d.descripcion || null,
   }));
 
