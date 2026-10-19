@@ -27,6 +27,7 @@ const CATEGORIAS = [
   "Conectividad",
   "Sillas Gamer",
   "Insumos",
+  "Random",
 ] as const;
 type NombreCategoria = (typeof CATEGORIAS)[number];
 
