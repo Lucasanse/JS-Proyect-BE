@@ -78,6 +78,10 @@ adminRouter.patch(
   adminProductos.cambiarEstadoProducto,
 );
 
+//Estado compras
+adminRouter.get("/ventas", adminProductos.eliminarProducto);
+adminRouter.get("/ventas/:id", adminProductos.eliminarProducto);
+
 // Datos para el formulario de productos
 adminRouter.get("/marcas", adminCatalogo.listarMarcasAdmin);
 adminRouter.post("/marcas", adminCatalogo.crearMarca);
