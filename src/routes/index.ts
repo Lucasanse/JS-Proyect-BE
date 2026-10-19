@@ -13,6 +13,7 @@ import {
   crearOrdenPorUnidad,
 } from "../controllers/checkout.controller";
 import { recibidorDeWebHookMP } from "../controllers/webhooks.controller";
+import { obtenerHistorialCompras } from "../controllers/comprasEstados.controller";
 
 export const apiRouter = Router();
 
@@ -39,8 +40,9 @@ apiRouter.delete("/carrito", requireAuth, carrito.vaciarCarrito);
 
 //Compra
 //Agregar el auth cuando se termine con las pruebas.
-apiRouter.post("/checkout/carrito", crearOrdenCarrito);
-apiRouter.post("/checkout/unidad", crearOrdenPorUnidad);
+apiRouter.post("/checkout/carrito", requireAuth, crearOrdenCarrito);
+apiRouter.post("/checkout/unidad", requireAuth, crearOrdenPorUnidad);
+apiRouter.get("/compras/:idUsuario", obtenerHistorialCompras);
 
 apiRouter.post("/webhooks/mercadopago", recibidorDeWebHookMP);
 
