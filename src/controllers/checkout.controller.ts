@@ -1,10 +1,7 @@
 import type { Request, Response } from "express";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { obtenerOCrearCarrito, detalleCarrito } from "./carrito.controller";
-import type { CarritoDetalle } from "../utils/catalogo.types";
-import { RawQueryArgs } from "@prisma/client/runtime/library";
 import { prisma } from "../utils/prisma";
-import { obtenerProductoPorId } from "./productoDetalle.controller";
 
 const cliente = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN!,
@@ -12,7 +9,7 @@ const cliente = new MercadoPagoConfig({
 
 export async function crearOrdenPorUnidad(req: Request, res: Response) {
   //Acá tambien hay que sacar el body
-  const idUsuario = Number(req.body.usuario!.id);
+  const idUsuario = Number(req.usuario!.id);
   const idProducto = Number(req.body.producto!.idProducto);
   const cantidad = Number(req.body.cantidad) || 1;
   //CUIDADO ACA CUANDO IMPLEMENTOS LO DEL CAMBIO DEL LENGUAJE DEL PRODUCTO
