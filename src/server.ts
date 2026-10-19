@@ -24,6 +24,15 @@ app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Solo desarrollo: MP vuelve por ngrok (que llega a este BE) y, si FRONTEND_URL esta definida en el .env
+// (ej. http://localhost:5173), se reenvia al FE conservando la query. Sin la variable no hace nada.
+if (process.env.FRONTEND_URL) {
+  const frontend = process.env.FRONTEND_URL.replace(/\/$/, "");
+  app.get("/checkout/:estado", (req, res) => {
+    res.redirect(`${frontend}${req.originalUrl}`);
+  });
+}
+
 // Imagenes de productos subidas por el admin: http://localhost:3000/uploads/xxx.webp
 app.use("/uploads", express.static(CARPETA_UPLOADS, { maxAge: "7d" }));
 
