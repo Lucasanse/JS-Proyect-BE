@@ -11,6 +11,16 @@ import * as servicioTecnico from "../controllers/servicioTecnico.controller";
 import * as adminServicioTecnico from "../controllers/adminServicioTecnico.controller";
 import { requireAdmin, requireAuth } from "../middlewares/auth";
 import { subirFotosIA, subirImagen } from "../middlewares/subirImagen";
+import {
+  crearOrdenCarrito,
+  crearOrdenPorUnidad,
+} from "../controllers/checkout.controller";
+import { recibidorDeWebHookMP } from "../controllers/webhooks.controller";
+import { obtenerHistorialCompras } from "../controllers/comprasEstados.controller";
+import {
+  marcarComoLeida,
+  obtenerNotificaciones,
+} from "../controllers/notificaciones.controller";
 
 export const apiRouter = Router();
 
@@ -27,7 +37,11 @@ apiRouter.patch("/usuario/idioma", requireAuth, idioma.actualizarIdiomaUsuario);
 // Carrito (requiere sesion iniciada)
 apiRouter.get("/carrito", requireAuth, carrito.obtenerCarrito);
 apiRouter.post("/carrito/items", requireAuth, carrito.agregarItem);
-apiRouter.patch("/carrito/items/:idProducto", requireAuth, carrito.modificarCantidad);
+apiRouter.patch(
+  "/carrito/items/:idProducto",
+  requireAuth,
+  carrito.modificarCantidad,
+);
 apiRouter.delete("/carrito/items/:idProducto", requireAuth, carrito.quitarItem);
 apiRouter.delete("/carrito", requireAuth, carrito.vaciarCarrito);
 
@@ -40,19 +54,42 @@ apiRouter.get("/servicio-tecnico/:id", requireAuth, servicioTecnico.obtenerMiSol
 apiRouter.get("/captura/:token", analisisIA.infoCaptura);
 apiRouter.post("/captura/:token/fotos", subirFotosIA, analisisIA.subirFotosCaptura);
 
+//Compra
+//Agregar el auth cuando se termine con las pruebas.
+apiRouter.post("/checkout/carrito", requireAuth, crearOrdenCarrito);
+apiRouter.post("/checkout/unidad", requireAuth, crearOrdenPorUnidad);
+apiRouter.get("/compras/:idUsuario", obtenerHistorialCompras);
+
+apiRouter.post("/webhooks/mercadopago", recibidorDeWebHookMP);
+
+//Notificaciones
+apiRouter.patch(
+  "/notificaciones/:idNotificacion/leida",
+  requireAuth,
+  marcarComoLeida,
+);
+apiRouter.get("/notificaciones/:idUsuario", requireAuth, obtenerNotificaciones);
+
 // Administracion (solo rol ADMIN: sin sesion -> 401, otro rol -> 403)
 const adminRouter = Router();
 adminRouter.use(requireAuth, requireAdmin);
 
 adminRouter.get("/productos", adminProductos.listarProductosAdmin);
 adminRouter.post("/productos", adminProductos.crearProducto);
-adminRouter.post("/productos/imagen", subirImagen, adminProductos.subirImagenProducto);
+adminRouter.post(
+  "/productos/imagen",
+  subirImagen,
+  adminProductos.subirImagenProducto,
+);
 adminRouter.post("/productos/analizar", subirFotosIA, analisisIA.analizarFotosProducto);
 adminRouter.get("/productos/:id", adminProductos.obtenerProductoAdmin);
 adminRouter.put("/productos/:id", adminProductos.actualizarProducto);
 adminRouter.patch("/productos/:id", adminProductos.actualizarProducto);
 adminRouter.delete("/productos/:id", adminProductos.eliminarProducto);
-adminRouter.patch("/productos/:id/estado", adminProductos.cambiarEstadoProducto);
+adminRouter.patch(
+  "/productos/:id/estado",
+  adminProductos.cambiarEstadoProducto,
+);
 
 // Datos para el formulario de productos
 adminRouter.get("/marcas", adminCatalogo.listarMarcasAdmin);
