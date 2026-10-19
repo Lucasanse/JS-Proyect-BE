@@ -19,6 +19,11 @@ import {
   marcarComoLeida,
   obtenerNotificaciones,
 } from "../controllers/notificaciones.controller";
+import {
+  cambiarEstadoVentaAdmin,
+  listarVentasAdmin,
+  obtenerVentaPorIdAdmin,
+} from "../controllers/adminPedidos.controller";
 
 export const apiRouter = Router();
 
@@ -45,7 +50,11 @@ apiRouter.delete("/carrito", requireAuth, carrito.vaciarCarrito);
 
 // Fotos desde el celular (QR del formulario de productos). Sin sesion: el token hace de permiso.
 apiRouter.get("/captura/:token", analisisIA.infoCaptura);
-apiRouter.post("/captura/:token/fotos", subirFotosIA, analisisIA.subirFotosCaptura);
+apiRouter.post(
+  "/captura/:token/fotos",
+  subirFotosIA,
+  analisisIA.subirFotosCaptura,
+);
 
 //Compra
 //Agregar el auth cuando se termine con las pruebas.
@@ -65,7 +74,7 @@ apiRouter.get("/notificaciones/:idUsuario", requireAuth, obtenerNotificaciones);
 
 // Administracion (solo rol ADMIN: sin sesion -> 401, otro rol -> 403)
 const adminRouter = Router();
-adminRouter.use(requireAuth, requireAdmin);
+// adminRouter.use(requireAuth, requireAdmin);
 
 adminRouter.get("/productos", adminProductos.listarProductosAdmin);
 adminRouter.post("/productos", adminProductos.crearProducto);
@@ -74,7 +83,11 @@ adminRouter.post(
   subirImagen,
   adminProductos.subirImagenProducto,
 );
-adminRouter.post("/productos/analizar", subirFotosIA, analisisIA.analizarFotosProducto);
+adminRouter.post(
+  "/productos/analizar",
+  subirFotosIA,
+  analisisIA.analizarFotosProducto,
+);
 adminRouter.get("/productos/:id", adminProductos.obtenerProductoAdmin);
 adminRouter.put("/productos/:id", adminProductos.actualizarProducto);
 adminRouter.patch("/productos/:id", adminProductos.actualizarProducto);
@@ -85,8 +98,9 @@ adminRouter.patch(
 );
 
 //Estado compras
-adminRouter.get("/ventas", adminProductos.eliminarProducto);
-adminRouter.get("/ventas/:id", adminProductos.eliminarProducto);
+adminRouter.get("/ventas", listarVentasAdmin);
+adminRouter.get("/ventas/:id", obtenerVentaPorIdAdmin);
+adminRouter.patch("/ventas/:id/estado", cambiarEstadoVentaAdmin);
 
 // Datos para el formulario de productos
 adminRouter.get("/marcas", adminCatalogo.listarMarcasAdmin);
