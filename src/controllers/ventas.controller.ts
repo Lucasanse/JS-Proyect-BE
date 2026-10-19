@@ -1,5 +1,6 @@
 import { error } from "node:console";
 import { prisma } from "../utils/prisma";
+import { crearNotificacionCompra } from "../utils/notificaciones";
 
 export async function procesarCompraAprobadaUnidad(
   idUsuario: number,
@@ -7,7 +8,7 @@ export async function procesarCompraAprobadaUnidad(
   idProducto: number,
   cantidad: number,
 ) {
-  return await prisma.$transaction(async (tx) => {
+  const resultadoVenta = await prisma.$transaction(async (tx) => {
     //Esto lo hacemos pq MP tira muchos avisos y esto hace que quede limpio y sin que se duplique
     const ventaExistente = await tx.venta.findUnique({
       where: { idPagoMp: idPagoMP },
@@ -51,15 +52,18 @@ export async function procesarCompraAprobadaUnidad(
       where: { idProducto: idProducto },
       data: { stock: { decrement: cantidad } },
     });
+
     return nuevaVenta;
   });
+  crearNotificacionCompra(idUsuario, resultadoVenta.idVenta);
+  return resultadoVenta;
 }
 
 export async function procesarCompraAprobadaCarrito(
   idUsuario: number,
   idPagoMP: string,
 ) {
-  return await prisma.$transaction(async (tx) => {
+  const resultadoVenta = await prisma.$transaction(async (tx) => {
     //Esto lo hacemos pq MP tira muchos avisos y esto hace que quede limpio y sin que se duplique
     const ventaExistente = await tx.venta.findUnique({
       where: { idPagoMp: idPagoMP },
@@ -126,4 +130,6 @@ export async function procesarCompraAprobadaCarrito(
 
     return nuevaVenta;
   });
+  crearNotificacionCompra(idUsuario, resultadoVenta.idVenta);
+  return resultadoVenta;
 }
