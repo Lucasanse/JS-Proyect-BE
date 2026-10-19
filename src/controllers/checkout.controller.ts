@@ -3,6 +3,9 @@ import { MercadoPagoConfig, Preference } from "mercadopago";
 import { obtenerOCrearCarrito, detalleCarrito } from "./carrito.controller";
 import { prisma } from "../utils/prisma";
 
+// URL publica del BE (ngrok en desarrollo). Cada uno pone la suya en PUBLIC_BACKEND_URL del .env.
+const URL_PUBLICA = (process.env.PUBLIC_BACKEND_URL || "https://agency-amino-angelic.ngrok-free.dev").replace(/\/$/, "");
+
 const cliente = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN!,
 });
@@ -36,14 +39,14 @@ export async function crearOrdenPorUnidad(req: Request, res: Response) {
         items: productoFormateadoParaMp,
         back_urls: {
           //Acá despues tendriamos que poner los links posta. Ahora en test dejemoslo asi pq MP no redirecciona a un localhost
-          success: "https://agency-amino-angelic.ngrok-free.dev/checkout/exito",
-          failure: "https://agency-amino-angelic.ngrok-free.dev/checkout/error",
+          success: `${URL_PUBLICA}/checkout/exito`,
+          failure: `${URL_PUBLICA}/checkout/error`,
           pending:
-            "https://agency-amino-angelic.ngrok-free.dev/checkout/pendiente",
+            `${URL_PUBLICA}/checkout/pendiente`,
         },
         auto_return: "approved",
         notification_url:
-          "https://agency-amino-angelic.ngrok-free.dev/api/webhooks/mercadopago",
+          `${URL_PUBLICA}/api/webhooks/mercadopago`,
         external_reference: `UNIDAD_${idUsuario}_${idProducto}_${cantidad}`,
         metadata: {
           tipoCompra: "unidad",
@@ -80,14 +83,14 @@ export async function crearOrdenCarrito(req: Request, res: Response) {
         items: productos,
         back_urls: {
           //Acá despues tendriamos que poner los links posta. Ahora en test dejemoslo asi pq MP no redirecciona a un localhost
-          success: "https://agency-amino-angelic.ngrok-free.dev/checkout/exito",
-          failure: "https://agency-amino-angelic.ngrok-free.dev/checkout/error",
+          success: `${URL_PUBLICA}/checkout/exito`,
+          failure: `${URL_PUBLICA}/checkout/error`,
           pending:
-            "https://agency-amino-angelic.ngrok-free.dev/checkout/pendiente",
+            `${URL_PUBLICA}/checkout/pendiente`,
         },
         auto_return: "approved",
         notification_url:
-          "https://agency-amino-angelic.ngrok-free.dev/api/webhooks/mercadopago",
+          `${URL_PUBLICA}/api/webhooks/mercadopago`,
         external_reference: `CARRITO_${idUsuario}`,
       },
     });
