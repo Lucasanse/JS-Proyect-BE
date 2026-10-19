@@ -14,6 +14,10 @@ import {
 } from "../controllers/checkout.controller";
 import { recibidorDeWebHookMP } from "../controllers/webhooks.controller";
 import { obtenerHistorialCompras } from "../controllers/comprasEstados.controller";
+import {
+  marcarComoLeida,
+  obtenerNotificaciones,
+} from "../controllers/notificaciones.controller";
 
 export const apiRouter = Router();
 
@@ -45,6 +49,14 @@ apiRouter.post("/checkout/unidad", requireAuth, crearOrdenPorUnidad);
 apiRouter.get("/compras/:idUsuario", obtenerHistorialCompras);
 
 apiRouter.post("/webhooks/mercadopago", recibidorDeWebHookMP);
+
+//Notificaciones
+apiRouter.patch(
+  "/notificaciones/:idNotificacion/leida",
+  requireAuth,
+  marcarComoLeida,
+);
+apiRouter.get("/notificaciones/:idUsuario", requireAuth, obtenerNotificaciones);
 
 // Administracion (solo rol ADMIN: sin sesion -> 401, otro rol -> 403)
 const adminRouter = Router();
