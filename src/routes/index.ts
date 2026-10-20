@@ -74,7 +74,7 @@ apiRouter.get("/notificaciones/:idUsuario", requireAuth, obtenerNotificaciones);
 
 // Administracion (solo rol ADMIN: sin sesion -> 401, otro rol -> 403)
 const adminRouter = Router();
-// adminRouter.use(requireAuth, requireAdmin);
+adminRouter.use(requireAuth, requireAdmin);
 
 adminRouter.get("/productos", adminProductos.listarProductosAdmin);
 adminRouter.post("/productos", adminProductos.crearProducto);
