@@ -7,6 +7,8 @@ import * as idioma from "../controllers/idioma.controller";
 import * as adminProductos from "../controllers/adminProductos.controller";
 import * as adminCatalogo from "../controllers/adminCatalogo.controller";
 import * as analisisIA from "../controllers/analisisIA.controller";
+import * as servicioTecnico from "../controllers/servicioTecnico.controller";
+import * as adminServicioTecnico from "../controllers/adminServicioTecnico.controller";
 import { requireAdmin, requireAuth } from "../middlewares/auth";
 import { subirFotosIA, subirImagen } from "../middlewares/subirImagen";
 import {
@@ -42,6 +44,11 @@ apiRouter.patch(
 );
 apiRouter.delete("/carrito/items/:idProducto", requireAuth, carrito.quitarItem);
 apiRouter.delete("/carrito", requireAuth, carrito.vaciarCarrito);
+
+// Servicio tecnico del cliente (requiere sesion iniciada; cada uno ve solo las suyas)
+apiRouter.post("/servicio-tecnico", requireAuth, servicioTecnico.crearSolicitud);
+apiRouter.get("/servicio-tecnico", requireAuth, servicioTecnico.listarMisSolicitudes);
+apiRouter.get("/servicio-tecnico/:id", requireAuth, servicioTecnico.obtenerMiSolicitud);
 
 // Fotos desde el celular (QR del formulario de productos). Sin sesion: el token hace de permiso.
 apiRouter.get("/captura/:token", analisisIA.infoCaptura);
@@ -94,5 +101,11 @@ adminRouter.post("/captura", analisisIA.crearCapturaFotos);
 adminRouter.get("/captura/:token", analisisIA.estadoCaptura);
 adminRouter.get("/captura/:token/fotos/:indice", analisisIA.fotoCaptura);
 adminRouter.delete("/captura/:token", analisisIA.cancelarCaptura);
+
+// Servicio tecnico: seguimiento, respuestas y cambios de estado
+adminRouter.get("/servicio-tecnico", adminServicioTecnico.listarSolicitudes);
+adminRouter.get("/servicio-tecnico/:id", adminServicioTecnico.obtenerSolicitud);
+adminRouter.post("/servicio-tecnico/:id/respuestas", adminServicioTecnico.responderSolicitud);
+adminRouter.patch("/servicio-tecnico/:id/estado", adminServicioTecnico.cambiarEstadoSolicitud);
 
 apiRouter.use("/admin", adminRouter);
