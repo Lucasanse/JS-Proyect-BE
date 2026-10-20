@@ -89,11 +89,19 @@ async function consultarGemini(fotos: FotoIA[], instrucciones: string, esquema: 
   }
 }
 
+// Segundos de espera que sugiere Google en un 429 ("retryDelay": "37s" o "Please retry in 37.2s")
+function segundosDeEspera(mensaje: string): number | undefined {
+  const encontrado = mensaje.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/) ?? mensaje.match(/retry in (\d+(?:\.\d+)?)s/i);
+  return encontrado ? Math.ceil(Number(encontrado[1])) : undefined;
+}
+
 // Pasa los errores de la API de Google a mensajes que el admin pueda entender
 function errorDeGemini(e: unknown, modelo: string): AppError {
   if (e instanceof AppError) return e;
   if (e instanceof ApiError) {
-    if (e.status === 429) return new AppError(429, "Se alcanzó el límite de uso de la IA, probá en un minuto");
+    if (e.status === 429) {
+      return new AppError(429, "Se alcanzó el límite de uso de la IA, probá en un minuto", segundosDeEspera(e.message) ?? 20);
+    }
     if (e.status === 401 || e.status === 403 || /api key/i.test(e.message)) {
       return new AppError(502, "La API key de Gemini no es válida. Revisá IA_API_KEY en el .env del back");
     }

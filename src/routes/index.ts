@@ -100,6 +100,8 @@ adminRouter.get("/tipos-componente", adminCatalogo.listarTiposComponente);
 adminRouter.post("/captura", analisisIA.crearCapturaFotos);
 adminRouter.get("/captura/:token", analisisIA.estadoCaptura);
 adminRouter.get("/captura/:token/fotos/:indice", analisisIA.fotoCaptura);
+adminRouter.post("/captura/:token/analizar/:indice", analisisIA.analizarFotoCaptura);
+adminRouter.post("/captura/:token/cerrar", analisisIA.cerrarCapturaFotos);
 adminRouter.delete("/captura/:token", analisisIA.cancelarCaptura);
 
 // Servicio tecnico: seguimiento, respuestas y cambios de estado

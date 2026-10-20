@@ -14,6 +14,9 @@ interface Captura {
   idUsuario: string; // admin que la creo: solo el puede ver y analizar las fotos
   expiraEn: number;
   fotos: FotoIA[];
+  // true cuando el admin ya mandó el lote a analizar: el celular no puede subir más fotos,
+  // pero las que hay se conservan hasta que se cierre el formulario
+  cerrada: boolean;
 }
 
 const capturas = new Map<string, Captura>();
@@ -29,7 +32,7 @@ export function crearCaptura(idUsuario: string) {
   for (const [token, captura] of capturas) if (captura.idUsuario === idUsuario) capturas.delete(token);
 
   const token = crypto.randomBytes(24).toString("base64url"); // 32 caracteres, imposible de adivinar
-  const captura: Captura = { idUsuario, expiraEn: Date.now() + MINUTOS_CAPTURA * 60_000, fotos: [] };
+  const captura: Captura = { idUsuario, expiraEn: Date.now() + MINUTOS_CAPTURA * 60_000, fotos: [], cerrada: false };
   capturas.set(token, captura);
   return { token, captura };
 }

@@ -63,12 +63,27 @@ export async function cargarCatalogoIA(): Promise<CatalogoIA> {
   };
 }
 
+// Atributos de texto cuyas opciones son listas largas y nunca van a estar completas (salen modelos
+// nuevos todo el tiempo). La IA los lee de la caja, así que no se le manda la lista en el prompt:
+// se ahorran tokens en cada foto. Las opciones siguen en la base: el formulario las sugiere y
+// sanearSugerencia las usa para unificar la escritura.
+const SIN_OPCIONES_EN_PROMPT = new Set([
+  "Chip grafico",
+  "Chipset",
+  "Salidas de video",
+  "Conectores de energia",
+  "Motherboards soportadas",
+]);
+
 export function instruccionesIA(c: CatalogoIA): string {
   const tipos = c.tipos
     .map((t) => {
       const atributos = t.atributos.map((a) => {
         const formato = a.numerico ? `número${a.unidad ? ` en ${a.unidad}` : ""}` : "texto";
-        const opciones = a.opciones.length > 0 ? `; valores habituales: ${a.opciones.join(" | ")}` : "";
+        const opciones =
+          a.opciones.length > 0 && !SIN_OPCIONES_EN_PROMPT.has(a.nombre)
+            ? `; valores habituales: ${a.opciones.join(" | ")}`
+            : "";
         return `    - ${a.nombre} (${formato}${opciones})`;
       });
       return `- ${t.nombre}:\n${atributos.join("\n")}`;

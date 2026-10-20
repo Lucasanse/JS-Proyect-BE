@@ -7,7 +7,9 @@ import { MAX_FOTOS_IA, MAX_MB_IMAGEN } from './subirImagen';
 // Middleware global de errores: cualquier error lanzado en una ruta termina aca.
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({ error: err.message });
+    if (err.reintentarEnSegundos === undefined) return res.status(err.statusCode).json({ error: err.message });
+    res.set('Retry-After', String(err.reintentarEnSegundos));
+    return res.status(err.statusCode).json({ error: err.message, reintentarEnSegundos: err.reintentarEnSegundos });
   }
 
   if (err instanceof ZodError) {

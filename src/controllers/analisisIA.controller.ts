@@ -30,6 +30,7 @@ async function analizar(fotos: FotoIA[]): Promise<SugerenciaProducto> {
   }
 
   const catalogo = await cargarCatalogoIA();
+  console.log("[TEMPORAL] prompt de la IA:\n" + instruccionesIA(catalogo)); // TODO: borrar
   const respuesta = await consultarIA(fotos, instruccionesIA(catalogo), esquemaRespuestaIA(catalogo));
   const sugerencia = sanearSugerencia(respuesta, catalogo);
   if (!sugerencia) throw new AppError(502, "La IA devolvió una respuesta inválida. Probá de nuevo");
@@ -53,10 +54,11 @@ function capturaDelAdmin(req: Request) {
   return resultado;
 }
 
-const estado = (captura: { fotos: FotoIA[]; expiraEn: number }) => ({
+const estado = (captura: { fotos: FotoIA[]; expiraEn: number; cerrada: boolean }) => ({
   fotos: captura.fotos.length,
   maxFotos: MAX_FOTOS_CAPTURA,
   expiraEn: new Date(captura.expiraEn).toISOString(),
+  cerrada: captura.cerrada,
 });
 
 // ── Admin ──────────────────────────────────────────────
@@ -79,15 +81,36 @@ export function estadoCaptura(req: Request, res: Response) {
   res.json(estado(capturaDelAdmin(req).captura));
 }
 
-// GET /api/admin/captura/:token/fotos/:indice
-// Devuelve una foto que llegó del celular. La PC las descarga para mostrarlas, elegir
-// cuáles analizar (con POST /productos/analizar) y cuál usar como imagen del producto.
-export function fotoCaptura(req: Request, res: Response) {
+// Foto de la captura del admin que hace el pedido, según el :indice de la URL
+function fotoDeCaptura(req: Request): FotoIA {
   const { captura } = capturaDelAdmin(req);
   const indice = Number(req.params.indice);
   const foto = Number.isInteger(indice) && indice >= 0 ? captura.fotos[indice] : undefined;
   if (!foto) throw new AppError(404, "La foto no existe");
+  return foto;
+}
+
+// GET /api/admin/captura/:token/fotos/:indice
+// Devuelve una foto que llegó del celular. La PC las descarga para mostrarlas y para
+// usarlas como imagen del producto.
+export function fotoCaptura(req: Request, res: Response) {
+  const foto = fotoDeCaptura(req);
   res.type(foto.mimetype).set("Cache-Control", "no-store").send(foto.buffer);
+}
+
+// POST /api/admin/captura/:token/analizar/:indice
+// Analiza una foto que ya está en el servidor: la PC no tiene que volver a subirla.
+export async function analizarFotoCaptura(req: Request, res: Response<SugerenciaProducto>) {
+  res.json(await analizar([fotoDeCaptura(req)]));
+}
+
+// POST /api/admin/captura/:token/cerrar  (al mandar el lote a analizar)
+// El celular deja de poder subir fotos, pero las que ya llegaron siguen disponibles para
+// descargarlas y analizarlas. Devuelve el estado final, con la cantidad definitiva de fotos.
+export function cerrarCapturaFotos(req: Request, res: Response) {
+  const { captura } = capturaDelAdmin(req);
+  captura.cerrada = true;
+  res.json(estado(captura));
 }
 
 // DELETE /api/admin/captura/:token  (al cerrar el formulario)
@@ -106,6 +129,9 @@ export function infoCaptura(req: Request, res: Response) {
 // POST /api/captura/:token/fotos  (multipart/form-data, campo "fotos")
 export function subirFotosCaptura(req: Request, res: Response) {
   const { captura } = capturaVigente(req);
+  if (captura.cerrada) {
+    throw new AppError(409, "El lote ya se envió desde la computadora. Para cargar más productos, generá un QR nuevo");
+  }
   const fotos = fotosDe(req);
   if (fotos.length === 0) throw new AppError(400, "No se envió ninguna foto");
 
