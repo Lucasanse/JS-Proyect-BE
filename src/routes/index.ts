@@ -21,6 +21,11 @@ import {
   marcarComoLeida,
   obtenerNotificaciones,
 } from "../controllers/notificaciones.controller";
+import {
+  cambiarEstadoVentaAdmin,
+  listarVentasAdmin,
+  obtenerVentaPorIdAdmin,
+} from "../controllers/adminPedidos.controller";
 
 export const apiRouter = Router();
 
@@ -52,7 +57,11 @@ apiRouter.get("/servicio-tecnico/:id", requireAuth, servicioTecnico.obtenerMiSol
 
 // Fotos desde el celular (QR del formulario de productos). Sin sesion: el token hace de permiso.
 apiRouter.get("/captura/:token", analisisIA.infoCaptura);
-apiRouter.post("/captura/:token/fotos", subirFotosIA, analisisIA.subirFotosCaptura);
+apiRouter.post(
+  "/captura/:token/fotos",
+  subirFotosIA,
+  analisisIA.subirFotosCaptura,
+);
 
 //Compra
 //Agregar el auth cuando se termine con las pruebas.
@@ -81,7 +90,11 @@ adminRouter.post(
   subirImagen,
   adminProductos.subirImagenProducto,
 );
-adminRouter.post("/productos/analizar", subirFotosIA, analisisIA.analizarFotosProducto);
+adminRouter.post(
+  "/productos/analizar",
+  subirFotosIA,
+  analisisIA.analizarFotosProducto,
+);
 adminRouter.get("/productos/:id", adminProductos.obtenerProductoAdmin);
 adminRouter.put("/productos/:id", adminProductos.actualizarProducto);
 adminRouter.patch("/productos/:id", adminProductos.actualizarProducto);
@@ -90,6 +103,11 @@ adminRouter.patch(
   "/productos/:id/estado",
   adminProductos.cambiarEstadoProducto,
 );
+
+//Estado compras
+adminRouter.get("/ventas", listarVentasAdmin);
+adminRouter.get("/ventas/:id", obtenerVentaPorIdAdmin);
+adminRouter.patch("/ventas/:id/estado", cambiarEstadoVentaAdmin);
 
 // Datos para el formulario de productos
 adminRouter.get("/marcas", adminCatalogo.listarMarcasAdmin);
