@@ -112,7 +112,6 @@ export const obtenerVentaPorIdAdmin = async (req: Request, res: Response) => {
 };
 export const listarVentasAdmin = async (req: Request, res: Response) => {
   try {
-    // 1. Capturamos los filtros y los parámetros de paginado (con valores por defecto)
     const {
       estado,
       fechaDesde,
@@ -123,12 +122,11 @@ export const listarVentasAdmin = async (req: Request, res: Response) => {
     } = req.query;
 
     // 2. Armamos la configuración matemática del paginado
-    const pagina = Math.max(1, parseInt(page as string, 10)); // Evita páginas menores a 1
+    const pagina = Math.max(1, parseInt(page as string, 10));
     const limite = Math.max(1, parseInt(limit as string, 10));
     const skip = (pagina - 1) * limite;
     const take = limite;
 
-    // 3. Inicializamos los filtros (whereParams)
     const whereParams: Prisma.VentaWhereInput = {};
 
     if (estado && typeof estado === "string") {
@@ -183,7 +181,6 @@ export const listarVentasAdmin = async (req: Request, res: Response) => {
       prisma.venta.count({ where: whereParams }),
     ]);
 
-    // 5. Devolvemos la respuesta estructurada
     return res.status(200).json({
       data: ventas,
       meta: {
