@@ -18,6 +18,8 @@ model Usuario {
   correo         String   @unique @map("correo")
   rol            String   @default("CLIENTE") @map("rol")
   idIdioma       Int      @default(1) @map("id_idioma")
+  // Un admin puede deshabilitar la cuenta: no puede iniciar sesion ni usar la que tenia abierta
+  habilitado     Boolean  @default(true) @map("habilitado")
 
   // Campos requeridos por Better Auth
   correoVerificado Boolean  @default(false) @map("correo_verificado")
