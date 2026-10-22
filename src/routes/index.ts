@@ -9,6 +9,7 @@ import * as adminCatalogo from "../controllers/adminCatalogo.controller";
 import * as analisisIA from "../controllers/analisisIA.controller";
 import * as servicioTecnico from "../controllers/servicioTecnico.controller";
 import * as adminServicioTecnico from "../controllers/adminServicioTecnico.controller";
+import * as adminUsuarios from "../controllers/adminUsuarios.controller";
 import { requireAdmin, requireAuth } from "../middlewares/auth";
 import { subirFotosIA, subirImagen } from "../middlewares/subirImagen";
 import {
@@ -125,5 +126,10 @@ adminRouter.get("/servicio-tecnico", adminServicioTecnico.listarSolicitudes);
 adminRouter.get("/servicio-tecnico/:id", adminServicioTecnico.obtenerSolicitud);
 adminRouter.post("/servicio-tecnico/:id/respuestas", adminServicioTecnico.responderSolicitud);
 adminRouter.patch("/servicio-tecnico/:id/estado", adminServicioTecnico.cambiarEstadoSolicitud);
+
+// Usuarios: consulta y habilitacion de cuentas
+adminRouter.get("/usuarios", adminUsuarios.listarUsuarios);
+adminRouter.get("/usuarios/:id", adminUsuarios.obtenerUsuario);
+adminRouter.patch("/usuarios/:id/habilitado", adminUsuarios.cambiarHabilitado);
 
 apiRouter.use("/admin", adminRouter);
