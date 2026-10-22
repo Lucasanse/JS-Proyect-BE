@@ -3,6 +3,7 @@ import * as productos from "../controllers/productos.controller";
 import * as productoDetalle from "../controllers/productoDetalle.controller";
 import * as categorias from "../controllers/categorias.controller";
 import * as carrito from "../controllers/carrito.controller";
+import * as cotizacion from "../controllers/cotizacion.controller";
 import * as idioma from "../controllers/idioma.controller";
 import * as adminProductos from "../controllers/adminProductos.controller";
 import * as adminCatalogo from "../controllers/adminCatalogo.controller";
@@ -35,6 +36,9 @@ apiRouter.get("/productos", productos.listarProductos);
 apiRouter.get("/productoDetalle/:id", productoDetalle.obtenerProductoPorId);
 apiRouter.get("/categorias", categorias.listarCategorias);
 apiRouter.get("/marcas", productos.listarMarcas);
+
+// Cotizacion del dolar (informativa, publica)
+apiRouter.get("/cotizacion", cotizacion.obtenerCotizacionActual);
 
 // Idioma del usuario (requiere sesion iniciada)
 apiRouter.get("/usuario/idioma", requireAuth, idioma.obtenerIdiomaUsuario);

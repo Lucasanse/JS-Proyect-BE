@@ -1,6 +1,7 @@
 import { error } from "node:console";
 import { prisma } from "../utils/prisma";
 import { crearNotificacionCompra } from "../utils/notificaciones";
+import { cotizacionParaVenta } from "../utils/cotizacion";
 
 export async function procesarCompraAprobadaUnidad(
   idUsuario: number,
@@ -39,6 +40,7 @@ export async function procesarCompraAprobadaUnidad(
         total: totalVenta,
         estado: "Pagado",
         idPagoMp: idPagoMP,
+        ...(await cotizacionParaVenta()),
         detalles: {
           create: {
             idProducto: idProducto,
@@ -108,6 +110,7 @@ export async function procesarCompraAprobadaCarrito(
         total: totalVenta,
         estado: "Pagado",
         idPagoMp: idPagoMP,
+        ...(await cotizacionParaVenta()),
         detalles: {
           create: detallesParaInsertar,
         },
