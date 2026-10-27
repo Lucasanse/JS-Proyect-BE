@@ -4,7 +4,10 @@ import { AppError } from "./AppError";
 // Cotizacion del dolar de DolarApi.com. Es solo informativa: el cobro siempre es en pesos.
 const TIPO = (process.env.COTIZACION_TIPO || "oficial").toLowerCase(); // oficial | blue | bolsa (MEP) | ...
 const INTERVALO_MIN = Number(process.env.COTIZACION_INTERVALO_MIN) || 30;
-// Pasado este tiempo sin poder actualizar, se avisa que la cotizacion esta desactualizada
+// Si una actualizacion falla (ej. la base todavia no arranco o no hay red) se reintenta antes
+const REINTENTO_MIN = Number(process.env.COTIZACION_REINTENTO_MIN) || 1;
+// Pasado este tiempo sin poder consultar DolarApi, se avisa que la cotizacion esta desactualizada.
+// Se mide desde la ultima consulta exitosa: la fecha de DolarApi solo cambia cuando cambia el valor.
 const MAX_ANTIGUEDAD_MS = (Number(process.env.COTIZACION_MAX_HORAS) || 2) * 60 * 60 * 1000;
 const URL_DOLARAPI = `https://dolarapi.com/v1/dolares/${TIPO}`;
 
@@ -31,8 +34,8 @@ export async function actualizarCotizacion(): Promise<boolean> {
     const valor = redondear(venta);
     await prisma.cotizacion.upsert({
       where: { id: 1 },
-      create: { id: 1, valor, tipo: TIPO, fechaActualizacion: fecha },
-      update: { valor, tipo: TIPO, fechaActualizacion: fecha },
+      create: { id: 1, valor, tipo: TIPO, fechaActualizacion: fecha, consultadaEn: new Date() },
+      update: { valor, tipo: TIPO, fechaActualizacion: fecha, consultadaEn: new Date() },
     });
     await recalcularPreciosUsd(valor);
     return true;
@@ -65,7 +68,7 @@ export async function obtenerCotizacion(): Promise<CotizacionRespuesta> {
     valor: redondear(Number(c.valor)),
     tipo: c.tipo,
     fechaActualizacion: c.fechaActualizacion.toISOString(),
-    desactualizada: Date.now() - c.fechaActualizacion.getTime() > MAX_ANTIGUEDAD_MS,
+    desactualizada: Date.now() - c.consultadaEn.getTime() > MAX_ANTIGUEDAD_MS,
   };
 }
 
@@ -75,8 +78,11 @@ export async function cotizacionParaVenta() {
   return c ? { cotizacionUsd: c.valor, cotizacionFecha: c.fechaActualizacion } : {};
 }
 
-// Actualiza al arrancar y despues cada INTERVALO_MIN minutos
+// Actualiza al arrancar y despues cada INTERVALO_MIN minutos. Si falla, reintenta a los REINTENTO_MIN.
 export function iniciarCronCotizacion() {
-  void actualizarCotizacion();
-  setInterval(() => void actualizarCotizacion(), INTERVALO_MIN * 60 * 1000).unref();
+  const ciclo = async () => {
+    const ok = await actualizarCotizacion();
+    setTimeout(() => void ciclo(), (ok ? INTERVALO_MIN : REINTENTO_MIN) * 60 * 1000).unref();
+  };
+  void ciclo();
 }

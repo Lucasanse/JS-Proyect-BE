@@ -284,7 +284,8 @@ model Cotizacion {
   id                  Int      @id @default(1) @map("id_cotizacion")
   valor               Decimal  @map("valor") @db.Decimal(12, 2)
   tipo                String   @map("tipo")
-  fechaActualizacion  DateTime @map("fecha_actualizacion")
+  fechaActualizacion  DateTime @map("fecha_actualizacion") // fecha que informa DolarApi (cambia solo con el valor)
+  consultadaEn        DateTime @default(now()) @map("consultada_en") // ultima consulta exitosa a DolarApi
 
   @@map("cotizaciones")
 }
