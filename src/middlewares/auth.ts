@@ -2,6 +2,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "../lib/auth";
+import { CODIGO_USUARIO_DESHABILITADO, MENSAJE_USUARIO_DESHABILITADO } from "../utils/usuarios.habilitacion";
 
 // Extraemos automáticamente los tipos exactos de tu configuración de Better Auth
 type SessionData = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
@@ -34,6 +35,13 @@ export const requireAuth = async (
         error:
           "No autenticado. Debes iniciar sesión para realizar esta acción.",
       });
+      return;
+    }
+
+    // Al deshabilitar la cuenta se borran sus sesiones; esto cubre una que se haya
+    // creado justo mientras tanto
+    if (session.user.habilitado === false) {
+      res.status(403).json({ error: MENSAJE_USUARIO_DESHABILITADO, code: CODIGO_USUARIO_DESHABILITADO });
       return;
     }
 

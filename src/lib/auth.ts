@@ -1,7 +1,9 @@
 // src/auth.ts
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { APIError } from "better-auth/api";
 import { PrismaClient } from "@prisma/client";
+import { CODIGO_USUARIO_DESHABILITADO, MENSAJE_USUARIO_DESHABILITADO } from "../utils/usuarios.habilitacion";
 
 export const prisma = new PrismaClient();
 
@@ -22,6 +24,29 @@ export const auth = betterAuth({
     enabled: true,
   },
 
+  // Un usuario deshabilitado no puede iniciar sesion: se corta al crear la sesion,
+  // despues de validar la contraseña (con datos incorrectos sigue saliendo "credenciales invalidas").
+  // Las sesiones que ya tenia se borran al deshabilitarlo (adminUsuarios.controller.ts).
+  databaseHooks: {
+    session: {
+      create: {
+        before: async (session, ctx) => {
+          if (!ctx) return;
+          // findUserById no conoce los additionalFields en el tipo, pero los trae
+          const usuario = (await ctx.context.internalAdapter.findUserById(String(session.userId))) as {
+            habilitado?: boolean;
+          } | null;
+          if (usuario?.habilitado === false) {
+            throw APIError.from("FORBIDDEN", {
+              message: MENSAJE_USUARIO_DESHABILITADO,
+              code: CODIGO_USUARIO_DESHABILITADO,
+            });
+          }
+        },
+      },
+    },
+  },
+
   // Mapeo al modelo Usuario
   user: {
     modelName: "usuario",
@@ -39,6 +64,8 @@ export const auth = betterAuth({
       cargo: { type: "string", required: false },
       direccion: { type: "string", required: false },
       telefono: { type: "string", required: false },
+      // Solo lo cambia un admin (PATCH /api/admin/usuarios/:id/habilitado)
+      habilitado: { type: "boolean", defaultValue: true, input: false },
     },
   },
 
