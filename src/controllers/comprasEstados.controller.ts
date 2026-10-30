@@ -68,6 +68,8 @@ export const obtenerHistorialCompras = async (req: Request, res: Response) => {
         items: cantidadTotal,
         metodoPago: venta.metodoPago,
         idPagoMp: venta.idPagoMp,
+        cotizacionUsd: venta.cotizacionUsd ? Number(venta.cotizacionUsd) : null,
+        cotizacionFecha: venta.cotizacionFecha?.toISOString() ?? null,
         productos,
       };
     });
