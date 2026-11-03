@@ -46,6 +46,8 @@ interface AtributoSeed {
 }
 
 const SI_NO = ["Si", "No"] as const;
+// Imagenes de los productos agregados para el armador de PC
+const CDN_IMAGENES = "https://cdn.shopify.com/s/files/1/0596/9300/6963/files";
 const RGB = ["No", "RGB", "ARGB"] as const;
 const SOCKETS = ["AM4", "AM5", "LGA1200", "LGA1700", "LGA1851"] as const;
 const SOCKETS_COOLER = [
@@ -158,6 +160,7 @@ const atributosPorTipo = {
     { nombre: "Formato", opciones: ["ATX", "SFX", "SFX-L"] },
     { nombre: "ATX 3.x (conector 12V-2x6)", opciones: SI_NO },
     { nombre: "PFC activo", opciones: SI_NO },
+    { nombre: "Largo", unidad: "mm", numerico: true }, // tiene que entrar en el gabinete
   ],
   Almacenamiento: [
     { nombre: "Capacidad", unidad: "GB", numerico: true },
@@ -182,6 +185,9 @@ const atributosPorTipo = {
     { nombre: "Panel lateral", opciones: ["Vidrio templado", "Acrilico", "Malla", "Acero"] },
     { nombre: "Fuente incluida", opciones: SI_NO },
     { nombre: "Color", opciones: ["Negro", "Blanco"] },
+    // Formatos de fuente que entran en el gabinete (lo usa el armador de PC)
+    { nombre: "Fuentes soportadas", opciones: ["ATX", "ATX / SFX / SFX-L", "SFX / SFX-L"] },
+    { nombre: "Largo maximo de fuente", unidad: "mm", numerico: true },
   ],
   "Cooler CPU": [
     { nombre: "Sockets compatibles", opciones: SOCKETS_COOLER },
@@ -252,7 +258,14 @@ const componentes = [
     descripcion: "Procesador de 6 nucleos para gaming y uso general.",
     imagenUrl:
       "https://www.t1distribution.nl/media/catalog/product/cache/15acba1947954f3fa31ee12bffe5ff16/a/m/amd-ryzen5-7600box-1589.png",
-    valores: { Socket: "AM5", Nucleos: "6", Frecuencia: "3.8" },
+    valores: {
+      Socket: "AM5",
+      Nucleos: "6",
+      Frecuencia: "3.8",
+      TDP: "65",
+      "Graficos integrados": "Si",
+      "Memoria soportada": "DDR5",
+    },
   },
   // Sin stock: sirve para probar las validaciones del carrito
   {
@@ -266,7 +279,14 @@ const componentes = [
     descripcion: "Procesador de 20 nucleos de alto rendimiento.",
     imagenUrl:
       "https://media.cdn.kaufland.de/product-images/1024x1024/5d1c1be82b24a451d3aeed1df8eb1f40.jpg",
-    valores: { Socket: "LGA1700", Nucleos: "20", Frecuencia: "3.4" },
+    valores: {
+      Socket: "LGA1700",
+      Nucleos: "20",
+      Frecuencia: "3.4",
+      TDP: "125",
+      "Graficos integrados": "Si",
+      "Memoria soportada": "DDR4 / DDR5",
+    },
   },
   {
     categoria: "Procesadores",
@@ -278,7 +298,14 @@ const componentes = [
     stock: 14,
     descripcion: "Procesador de 10 nucleos sin graficos integrados.",
     imagenUrl: "https://m.media-amazon.com/images/I/61IgclF1FEL.jpg",
-    valores: { Socket: "LGA1700", Nucleos: "10", Frecuencia: "2.5" },
+    valores: {
+      Socket: "LGA1700",
+      Nucleos: "10",
+      Frecuencia: "2.5",
+      TDP: "65",
+      "Graficos integrados": "No",
+      "Memoria soportada": "DDR4 / DDR5",
+    },
   },
   {
     categoria: "Placas de Video",
@@ -291,7 +318,13 @@ const componentes = [
     descripcion: "Placa de video ideal para jugar en 1080p.",
     imagenUrl:
       "https://www.liontech-gaming.com/wp-content/uploads/2025/03/VGA-ASUS-GEFORCE-RTX-4060-DUAL-OC-EDITION-8G.webp",
-    valores: { Memoria: "8", "Tipo de memoria": "GDDR6" },
+    valores: {
+      Memoria: "8",
+      "Tipo de memoria": "GDDR6",
+      Largo: "227",
+      "Conectores de energia": "1x 8 pines",
+      "Fuente recomendada": "550",
+    },
   },
   {
     categoria: "Placas de Video",
@@ -304,7 +337,13 @@ const componentes = [
     descripcion: "Placa de video ideal para jugar en 1080p y 1440p.",
     imagenUrl:
       "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Nvidia_GeForce_RTX_5060_Ti_16GB%2C_PNY_Overclocked_Dual_Fan%2C_front.jpg/960px-Nvidia_GeForce_RTX_5060_Ti_16GB%2C_PNY_Overclocked_Dual_Fan%2C_front.jpg",
-    valores: { Memoria: "16", "Tipo de memoria": "GDDR7" },
+    valores: {
+      Memoria: "16",
+      "Tipo de memoria": "GDDR7",
+      Largo: "250",
+      "Conectores de energia": "1x 8 pines",
+      "Fuente recomendada": "600",
+    },
   },
   {
     categoria: "Placas de Video",
@@ -317,7 +356,13 @@ const componentes = [
     descripcion: "Placa de video para jugar en 1440p con ray tracing.",
     imagenUrl:
       "https://img.terabyteshop.com.br/produto/g/placa-de-video-msi-nvidia-geforce-rtx-4070-ventus-2x-oc-12gb-gddr6-dlss-ray-tracing-912-v513-063_167516.png",
-    valores: { Memoria: "12", "Tipo de memoria": "GDDR6X" },
+    valores: {
+      Memoria: "12",
+      "Tipo de memoria": "GDDR6X",
+      Largo: "242",
+      "Conectores de energia": "1x 8 pines",
+      "Fuente recomendada": "650",
+    },
   },
   {
     categoria: "Placas de Video",
@@ -330,7 +375,13 @@ const componentes = [
     descripcion: "Placa de video AMD para 1080p.",
     imagenUrl:
       "https://media.ldlc.com/r1600/ld/products/00/06/03/65/LD0006036585.jpg",
-    valores: { Memoria: "8", "Tipo de memoria": "GDDR6" },
+    valores: {
+      Memoria: "8",
+      "Tipo de memoria": "GDDR6",
+      Largo: "240",
+      "Conectores de energia": "1x 8 pines",
+      "Fuente recomendada": "550",
+    },
   },
   {
     categoria: "Memorias RAM",
@@ -343,7 +394,7 @@ const componentes = [
     descripcion: "Modulo de memoria DDR5 de 16GB.",
     imagenUrl:
       "https://cyberbull.com.bd/wp-content/uploads/2026/02/kingston-fury-beast-16gb-ddr5-5600mhz-black-2.jpg",
-    valores: { Capacidad: "16", Tipo: "DDR5", Frecuencia: "5600" },
+    valores: { Capacidad: "16", Tipo: "DDR5", Frecuencia: "5600", Modulos: "1" },
   },
   {
     categoria: "Memorias RAM",
@@ -356,7 +407,7 @@ const componentes = [
     descripcion: "Modulo de memoria DDR4 de 16GB.",
     imagenUrl:
       "https://dinobyte.ar/wp-content/uploads/Memoria-Corsair-vengeance-LPX-Black.jpg",
-    valores: { Capacidad: "16", Tipo: "DDR4", Frecuencia: "3200" },
+    valores: { Capacidad: "16", Tipo: "DDR4", Frecuencia: "3200", Modulos: "1" },
   },
   {
     categoria: "Motherboards",
@@ -369,7 +420,16 @@ const componentes = [
     descripcion: "Motherboard micro ATX para procesadores AM5.",
     imagenUrl:
       "https://media.ldlc.com/r1600/ld/products/00/06/00/57/LD0006005768.jpg",
-    valores: { Socket: "AM5", "Tipo de RAM": "DDR5", Formato: "mATX" },
+    valores: {
+      Socket: "AM5",
+      "Tipo de RAM": "DDR5",
+      Formato: "mATX",
+      Chipset: "B650",
+      "Slots de memoria": "4",
+      "Memoria maxima": "192",
+      "Ranuras M.2": "2",
+      "Puertos SATA": "4",
+    },
   },
   {
     categoria: "Motherboards",
@@ -382,7 +442,16 @@ const componentes = [
     descripcion: "Motherboard ATX para procesadores Intel LGA1700.",
     imagenUrl:
       "https://www.picclickimg.com/Tr8AAeSwqBJqtlGs/Msi-MAG-Z790-TOMAHAWK-WIFI-Socket-1700-Z790-Ddr5-S-Ata-6Gb-S-Atx.webp",
-    valores: { Socket: "LGA1700", "Tipo de RAM": "DDR5", Formato: "ATX" },
+    valores: {
+      Socket: "LGA1700",
+      "Tipo de RAM": "DDR5",
+      Formato: "ATX",
+      Chipset: "Z790",
+      "Slots de memoria": "4",
+      "Memoria maxima": "192",
+      "Ranuras M.2": "4",
+      "Puertos SATA": "7",
+    },
   },
   {
     categoria: "Fuentes",
@@ -395,7 +464,13 @@ const componentes = [
     descripcion: "Fuente modular de 750W.",
     imagenUrl:
       "https://fullh4rd.com.ar/img/productos/26/fuente-750w-corsair-rm750e-80-plus-gold-bajo-ruido-fully-modular-1.jpg",
-    valores: { Potencia: "750", Certificacion: "80 Plus Gold" },
+    valores: {
+      Potencia: "750",
+      Certificacion: "80 Plus Gold",
+      Formato: "ATX",
+      "ATX 3.x (conector 12V-2x6)": "Si",
+      Largo: "140",
+    },
   },
   {
     categoria: "Fuentes",
@@ -408,7 +483,13 @@ const componentes = [
     descripcion: "Fuente de 550W para equipos de gama media.",
     imagenUrl:
       "https://files.coolermaster.com/og-image/mwe-550-bronze-v2-230v-600x600.jpg",
-    valores: { Potencia: "550", Certificacion: "80 Plus Bronze" },
+    valores: {
+      Potencia: "550",
+      Certificacion: "80 Plus Bronze",
+      Formato: "ATX",
+      "ATX 3.x (conector 12V-2x6)": "No",
+      Largo: "140",
+    },
   },
   {
     categoria: "Almacenamiento",
@@ -421,7 +502,7 @@ const componentes = [
     descripcion: "Disco solido NVMe de 1TB.",
     imagenUrl:
       "https://media.ldlc.com/r1600/ld/products/00/06/10/22/LD0006102201.jpg",
-    valores: { Capacidad: "1000", Tipo: "NVMe" },
+    valores: { Capacidad: "1000", Tipo: "NVMe", Formato: "M.2 2280", Interfaz: "PCIe 4.0 x4" },
   },
   {
     categoria: "Almacenamiento",
@@ -434,7 +515,7 @@ const componentes = [
     descripcion: "Disco rigido de 2TB para almacenamiento masivo.",
     imagenUrl:
       "https://www.deffo.com.ar/wp-content/uploads/2020/08/ST2000DM008-1.jpg",
-    valores: { Capacidad: "2000", Tipo: "HDD" },
+    valores: { Capacidad: "2000", Tipo: "HDD", Formato: '3.5"', Interfaz: "SATA III", RPM: "7200" },
   },
   {
     categoria: "Gabinetes",
@@ -455,6 +536,8 @@ const componentes = [
       "Panel lateral": "Vidrio templado",
       "Fuente incluida": "No",
       Color: "Negro",
+      "Fuentes soportadas": "ATX",
+      "Largo maximo de fuente": "220",
     },
   },
   {
@@ -527,6 +610,418 @@ const componentes = [
       "Velocidad maxima": "3000",
       Bluetooth: "5.2",
     },
+  },
+  // ─── Mas variedad para el armador de PC ───────────────────────────────
+  // Imagenes: foto principal del producto en el CDN de Shopify de computerlounge.co.nz
+  {
+    categoria: "Procesadores",
+    tipo: "CPU",
+    watts: 120,
+    nombre: "Ryzen 7 7800X3D",
+    marca: "AMD",
+    precio: 620000,
+    stock: 7,
+    descripcion: "Procesador de 8 nucleos con 3D V-Cache, de los mejores para jugar.",
+    imagenUrl: `${CDN_IMAGENES}/45215_productphoto1_1.jpg`,
+    valores: {
+      Socket: "AM5",
+      Nucleos: "8",
+      Hilos: "16",
+      Frecuencia: "4.2",
+      "Frecuencia turbo": "5",
+      TDP: "120",
+      "Graficos integrados": "Si",
+      "Memoria soportada": "DDR5",
+    },
+  },
+  {
+    categoria: "Procesadores",
+    tipo: "CPU",
+    watts: 65,
+    nombre: "Ryzen 5 5600",
+    marca: "AMD",
+    precio: 160000,
+    stock: 18,
+    descripcion: "Procesador de 6 nucleos para AM4, ideal para equipos economicos.",
+    imagenUrl: `${CDN_IMAGENES}/40135_productphoto1_1.jpg`,
+    valores: {
+      Socket: "AM4",
+      Nucleos: "6",
+      Hilos: "12",
+      Frecuencia: "3.5",
+      "Frecuencia turbo": "4.4",
+      TDP: "65",
+      "Graficos integrados": "No",
+      "Memoria soportada": "DDR4",
+      "Cooler incluido": "Si",
+    },
+  },
+  {
+    categoria: "Procesadores",
+    tipo: "CPU",
+    watts: 125,
+    nombre: "Core Ultra 5 245K",
+    marca: "Intel",
+    precio: 380000,
+    stock: 9,
+    descripcion: "Procesador de 14 nucleos de la serie Core Ultra 200S.",
+    imagenUrl: `${CDN_IMAGENES}/67229_productphoto1_1.jpg`,
+    valores: {
+      Socket: "LGA1851",
+      Nucleos: "14",
+      Hilos: "14",
+      Frecuencia: "4.2",
+      "Frecuencia turbo": "5.2",
+      TDP: "125",
+      "Graficos integrados": "Si",
+      "Memoria soportada": "DDR5",
+    },
+  },
+  {
+    categoria: "Motherboards",
+    tipo: "Motherboard",
+    watts: 45,
+    nombre: "B550M DS3H AC",
+    marca: "Gigabyte",
+    precio: 140000,
+    stock: 10,
+    descripcion: "Motherboard micro ATX para procesadores AM4 con WiFi.",
+    imagenUrl: `${CDN_IMAGENES}/78816_productphoto1_1.jpg`,
+    valores: {
+      Socket: "AM4",
+      "Tipo de RAM": "DDR4",
+      Formato: "mATX",
+      Chipset: "B550",
+      "Slots de memoria": "4",
+      "Memoria maxima": "128",
+      "Ranuras M.2": "2",
+      "Puertos SATA": "4",
+      WiFi: "WiFi 6",
+    },
+  },
+  {
+    categoria: "Motherboards",
+    tipo: "Motherboard",
+    watts: 55,
+    nombre: "B650 Gaming Plus WiFi",
+    marca: "MSI",
+    precio: 260000,
+    stock: 8,
+    descripcion: "Motherboard ATX para procesadores AM5 con WiFi 6E.",
+    imagenUrl: `${CDN_IMAGENES}/56969_productphoto1_1.jpg`,
+    valores: {
+      Socket: "AM5",
+      "Tipo de RAM": "DDR5",
+      Formato: "ATX",
+      Chipset: "B650",
+      "Slots de memoria": "4",
+      "Memoria maxima": "192",
+      "Ranuras M.2": "2",
+      "Puertos SATA": "4",
+      WiFi: "WiFi 6E",
+    },
+  },
+  {
+    categoria: "Motherboards",
+    tipo: "Motherboard",
+    watts: 45,
+    nombre: "MPG B760I Edge WiFi",
+    marca: "MSI",
+    precio: 300000,
+    stock: 4,
+    descripcion: "Motherboard Mini-ITX para Intel LGA1700, para equipos compactos.",
+    imagenUrl: `${CDN_IMAGENES}/49143_productphoto1_1.jpg`,
+    valores: {
+      Socket: "LGA1700",
+      "Tipo de RAM": "DDR5",
+      Formato: "Mini-ITX",
+      Chipset: "B760",
+      "Slots de memoria": "2",
+      "Memoria maxima": "96",
+      "Ranuras M.2": "2",
+      "Puertos SATA": "4",
+      WiFi: "WiFi 6E",
+    },
+  },
+  {
+    categoria: "Motherboards",
+    tipo: "Motherboard",
+    watts: 55,
+    nombre: "TUF Gaming B860-Plus WiFi",
+    marca: "ASUS",
+    precio: 310000,
+    stock: 6,
+    descripcion: "Motherboard ATX para procesadores Intel Core Ultra (LGA1851).",
+    imagenUrl: `${CDN_IMAGENES}/71867_productphoto1_1.jpg`,
+    valores: {
+      Socket: "LGA1851",
+      "Tipo de RAM": "DDR5",
+      Formato: "ATX",
+      Chipset: "B860",
+      "Slots de memoria": "4",
+      "Memoria maxima": "256",
+      "Ranuras M.2": "3",
+      "Puertos SATA": "4",
+      WiFi: "WiFi 7",
+    },
+  },
+  {
+    categoria: "Memorias RAM",
+    tipo: "RAM",
+    watts: 10,
+    nombre: "Vengeance 32GB (2x16GB) DDR5 6000",
+    marca: "Corsair",
+    precio: 150000,
+    stock: 14,
+    descripcion: "Kit de dos modulos DDR5 de 16GB a 6000MHz.",
+    imagenUrl: `${CDN_IMAGENES}/50588_productphoto1_1.jpg`,
+    valores: { Capacidad: "32", Tipo: "DDR5", Frecuencia: "6000", Modulos: "2", "Latencia CAS": "30", Formato: "DIMM" },
+  },
+  {
+    categoria: "Memorias RAM",
+    tipo: "RAM",
+    watts: 8,
+    nombre: "T-Create Expert 16GB (2x8GB) DDR4 3200",
+    marca: "TeamGroup",
+    precio: 55000,
+    stock: 20,
+    descripcion: "Kit de dos modulos DDR4 de 8GB a 3200MHz.",
+    imagenUrl: `${CDN_IMAGENES}/55738_productphoto1_1.jpg`,
+    valores: { Capacidad: "16", Tipo: "DDR4", Frecuencia: "3200", Modulos: "2", "Latencia CAS": "16", Formato: "DIMM" },
+  },
+  {
+    categoria: "Placas de Video",
+    tipo: "GPU",
+    watts: 250,
+    nombre: "GeForce RTX 5070 Gaming Trio OC White",
+    marca: "MSI",
+    precio: 950000,
+    stock: 6,
+    descripcion: "Placa de video para jugar en 1440p, con tres ventiladores (338 mm de largo).",
+    imagenUrl: `${CDN_IMAGENES}/71451_productphoto1_1.jpg`,
+    valores: {
+      Memoria: "12",
+      "Tipo de memoria": "GDDR7",
+      "Chip grafico": "GeForce RTX 5070",
+      Largo: "338",
+      "Conectores de energia": "1x 16 pines (12V-2x6)",
+      "Fuente recomendada": "650",
+    },
+  },
+  {
+    categoria: "Placas de Video",
+    tipo: "GPU",
+    watts: 575,
+    nombre: "GeForce RTX 5090 X3 OC",
+    marca: "INNO3D",
+    precio: 3900000,
+    stock: 2,
+    descripcion: "La placa de video mas potente para 4K. Necesita una fuente de 1000W.",
+    imagenUrl: `${CDN_IMAGENES}/75059_productphoto1_1.jpg`,
+    valores: {
+      Memoria: "32",
+      "Tipo de memoria": "GDDR7",
+      "Chip grafico": "GeForce RTX 5090",
+      Largo: "333",
+      "Conectores de energia": "1x 16 pines (12V-2x6)",
+      "Fuente recomendada": "1000",
+    },
+  },
+  // Gabinetes de distintos tamanos: el armador usa las medidas para saber que entra en cada uno
+  {
+    categoria: "Gabinetes",
+    tipo: "Gabinete",
+    watts: 0,
+    nombre: "Terra Mini ITX",
+    marca: "Fractal Design",
+    precio: 280000,
+    stock: 4,
+    descripcion: "Gabinete Mini-ITX compacto de 10.4 litros. Solo fuentes SFX y placas de video de hasta 322 mm.",
+    imagenUrl: `${CDN_IMAGENES}/41575_productphoto1_1.jpg`,
+    valores: {
+      Formato: "Mini-ITX",
+      "Motherboards soportadas": "Mini-ITX",
+      "Largo maximo de GPU": "322",
+      "Altura maxima de cooler": "77",
+      "Ventiladores incluidos": "0",
+      "Panel lateral": "Acero",
+      "Fuente incluida": "No",
+      Color: "Negro",
+      "Fuentes soportadas": "SFX / SFX-L",
+      "Largo maximo de fuente": "130",
+    },
+  },
+  {
+    categoria: "Gabinetes",
+    tipo: "Gabinete",
+    watts: 0,
+    nombre: "2800X RS-R ARGB",
+    marca: "Corsair",
+    precio: 160000,
+    stock: 7,
+    descripcion: "Gabinete para motherboards micro ATX y Mini-ITX, con vidrio templado.",
+    imagenUrl: `${CDN_IMAGENES}/130966_productphoto1_1.jpg`,
+    valores: {
+      Formato: "Mini Tower",
+      "Motherboards soportadas": "mATX / Mini-ITX",
+      "Largo maximo de GPU": "400",
+      "Altura maxima de cooler": "170",
+      "Ventiladores incluidos": "3",
+      "Radiador maximo": "360",
+      "Panel lateral": "Vidrio templado",
+      "Fuente incluida": "No",
+      Color: "Negro",
+      "Fuentes soportadas": "ATX",
+      "Largo maximo de fuente": "200",
+    },
+  },
+  {
+    categoria: "Gabinetes",
+    tipo: "Gabinete",
+    watts: 0,
+    nombre: "North",
+    marca: "Fractal Design",
+    precio: 230000,
+    stock: 5,
+    descripcion: "Gabinete Mid Tower con frente de madera. Placas de video de hasta 355 mm.",
+    imagenUrl: `${CDN_IMAGENES}/41570_productphoto1_1.jpg`,
+    valores: {
+      Formato: "Mid Tower",
+      "Motherboards soportadas": "ATX / mATX / Mini-ITX",
+      "Largo maximo de GPU": "355",
+      "Altura maxima de cooler": "170",
+      "Ventiladores incluidos": "2",
+      "Radiador maximo": "360",
+      "Panel lateral": "Vidrio templado",
+      "Fuente incluida": "No",
+      Color: "Negro",
+      "Fuentes soportadas": "ATX",
+      "Largo maximo de fuente": "255",
+    },
+  },
+  {
+    categoria: "Gabinetes",
+    tipo: "Gabinete",
+    watts: 0,
+    nombre: "North XL",
+    marca: "Fractal Design",
+    precio: 300000,
+    stock: 3,
+    descripcion: "Gabinete Full Tower para motherboards E-ATX y placas de video de hasta 413 mm.",
+    imagenUrl: `${CDN_IMAGENES}/56858_productphoto1_1.jpg`,
+    valores: {
+      Formato: "Full Tower",
+      "Motherboards soportadas": "E-ATX / ATX / mATX / Mini-ITX",
+      "Largo maximo de GPU": "413",
+      "Altura maxima de cooler": "185",
+      "Ventiladores incluidos": "3",
+      "Radiador maximo": "420",
+      "Panel lateral": "Vidrio templado",
+      "Fuente incluida": "No",
+      Color: "Negro",
+      "Fuentes soportadas": "ATX",
+      "Largo maximo de fuente": "250",
+    },
+  },
+  {
+    categoria: "Fuentes",
+    tipo: "Fuente",
+    watts: 0,
+    nombre: "SF750 Platinum SFX",
+    marca: "Corsair",
+    precio: 260000,
+    stock: 6,
+    descripcion: "Fuente SFX de 750W para gabinetes compactos.",
+    imagenUrl: `${CDN_IMAGENES}/71212_productphoto1_1.jpg`,
+    valores: {
+      Potencia: "750",
+      Certificacion: "80 Plus Platinum",
+      Modular: "Full modular",
+      Formato: "SFX",
+      "ATX 3.x (conector 12V-2x6)": "Si",
+      Largo: "100",
+    },
+  },
+  {
+    categoria: "Fuentes",
+    tipo: "Fuente",
+    watts: 0,
+    nombre: "TR-KG850 Gold",
+    marca: "Thermalright",
+    precio: 140000,
+    stock: 10,
+    descripcion: "Fuente ATX 3.1 de 850W, modular, con conector 12V-2x6.",
+    imagenUrl: `${CDN_IMAGENES}/77387_productphoto1_1.jpg`,
+    valores: {
+      Potencia: "850",
+      Certificacion: "80 Plus Gold",
+      Modular: "Full modular",
+      Formato: "ATX",
+      "ATX 3.x (conector 12V-2x6)": "Si",
+      Largo: "150",
+    },
+  },
+  {
+    categoria: "Fuentes",
+    tipo: "Fuente",
+    watts: 0,
+    nombre: "CX550 Bronze",
+    marca: "Corsair",
+    precio: 70000,
+    stock: 15,
+    descripcion: "Fuente ATX de 550W para equipos de oficina o gama de entrada.",
+    imagenUrl: `${CDN_IMAGENES}/62957_productphoto1_1.jpg`,
+    valores: {
+      Potencia: "550",
+      Certificacion: "80 Plus Bronze",
+      Modular: "No",
+      Formato: "ATX",
+      "ATX 3.x (conector 12V-2x6)": "No",
+      Largo: "125",
+    },
+  },
+  {
+    categoria: "Fuentes",
+    tipo: "Fuente",
+    watts: 0,
+    nombre: "RM1000e Gold",
+    marca: "Corsair",
+    precio: 230000,
+    stock: 5,
+    descripcion: "Fuente ATX 3.1 de 1000W para placas de video de gama alta.",
+    imagenUrl: `${CDN_IMAGENES}/82706_productphoto1_1.jpg`,
+    valores: {
+      Potencia: "1000",
+      Certificacion: "80 Plus Gold",
+      Modular: "Full modular",
+      Formato: "ATX",
+      "ATX 3.x (conector 12V-2x6)": "Si",
+      Largo: "160",
+    },
+  },
+  {
+    categoria: "Almacenamiento",
+    tipo: "Almacenamiento",
+    watts: 5,
+    nombre: "NV3 500GB NVMe",
+    marca: "Kingston",
+    precio: 50000,
+    stock: 25,
+    descripcion: "Disco solido NVMe de 500GB, PCIe 4.0.",
+    imagenUrl: `${CDN_IMAGENES}/64042_productphoto1_1.png`,
+    valores: { Capacidad: "500", Tipo: "NVMe", Formato: "M.2 2280", Interfaz: "PCIe 4.0 x4", "Lectura secuencial": "5000" },
+  },
+  {
+    categoria: "Almacenamiento",
+    tipo: "Almacenamiento",
+    watts: 3,
+    nombre: "CS900 1TB SATA",
+    marca: "PNY",
+    precio: 75000,
+    stock: 12,
+    descripcion: "Disco solido SATA de 2.5 pulgadas y 1TB.",
+    imagenUrl: `${CDN_IMAGENES}/135721_productphoto1_1.png`,
+    valores: { Capacidad: "1000", Tipo: "SSD SATA", Formato: '2.5"', Interfaz: "SATA III", "Lectura secuencial": "535" },
   },
 ] as const satisfies readonly ComponenteSeed[];
 
@@ -746,6 +1241,33 @@ const otrosProductos = [
       "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/6463/6463483_sd.jpg",
   },
   {
+    categoria: "Monitores",
+    nombre: 'Monitor Odyssey G5 27" 165Hz Curvo',
+    marca: "Samsung",
+    precio: 420000,
+    stock: 6,
+    descripcion: "Monitor curvo de 27 pulgadas QHD a 165Hz para jugar.",
+    imagenUrl: `${CDN_IMAGENES}/59624_productphoto1_1.jpg`,
+  },
+  {
+    categoria: "Monitores",
+    nombre: 'Monitor GS27FA 27" 180Hz',
+    marca: "Gigabyte",
+    precio: 280000,
+    stock: 9,
+    descripcion: "Monitor IPS de 27 pulgadas Full HD a 180Hz.",
+    imagenUrl: `${CDN_IMAGENES}/65301_productphoto1_1.jpg`,
+  },
+  {
+    categoria: "Monitores",
+    nombre: 'Monitor P2425D 24" QHD',
+    marca: "Dell",
+    precio: 300000,
+    stock: 8,
+    descripcion: "Monitor IPS de 24 pulgadas QHD para trabajo y estudio.",
+    imagenUrl: `${CDN_IMAGENES}/83105_productphoto1_1.jpg`,
+  },
+  {
     categoria: "Perifericos",
     nombre: "Webcam C920",
     marca: "Logitech",
@@ -883,6 +1405,103 @@ const traduccionesEn: Partial<
   "Barracuda 2TB": {
     nombre: "Barracuda 2TB Hard Drive",
     descripcion: "2TB hard drive for mass storage.",
+  },
+  // Agregados para el armador de PC
+  "Ryzen 7 7800X3D": {
+    nombre: "AMD Ryzen 7 7800X3D Processor",
+    descripcion: "8-core processor with 3D V-Cache, one of the best for gaming.",
+  },
+  "Ryzen 5 5600": {
+    nombre: "AMD Ryzen 5 5600 Processor",
+    descripcion: "6-core AM4 processor, great for budget builds.",
+  },
+  "Core Ultra 5 245K": {
+    nombre: "Intel Core Ultra 5 245K Processor",
+    descripcion: "14-core processor from the Core Ultra 200S series.",
+  },
+  "B550M DS3H AC": {
+    nombre: "B550M DS3H AC Motherboard",
+    descripcion: "Micro ATX motherboard for AM4 processors with WiFi.",
+  },
+  "B650 Gaming Plus WiFi": {
+    nombre: "B650 Gaming Plus WiFi Motherboard",
+    descripcion: "ATX motherboard for AM5 processors with WiFi 6E.",
+  },
+  "MPG B760I Edge WiFi": {
+    nombre: "MPG B760I Edge WiFi Motherboard",
+    descripcion: "Mini-ITX motherboard for Intel LGA1700, for compact builds.",
+  },
+  "TUF Gaming B860-Plus WiFi": {
+    nombre: "TUF Gaming B860-Plus WiFi Motherboard",
+    descripcion: "ATX motherboard for Intel Core Ultra processors (LGA1851).",
+  },
+  "Vengeance 32GB (2x16GB) DDR5 6000": {
+    nombre: "Vengeance 32GB (2x16GB) DDR5 6000 Memory Kit",
+    descripcion: "Kit of two 16GB DDR5 modules at 6000MHz.",
+  },
+  "T-Create Expert 16GB (2x8GB) DDR4 3200": {
+    nombre: "T-Create Expert 16GB (2x8GB) DDR4 3200 Memory Kit",
+    descripcion: "Kit of two 8GB DDR4 modules at 3200MHz.",
+  },
+  "GeForce RTX 5070 Gaming Trio OC White": {
+    nombre: "GeForce RTX 5070 Gaming Trio OC White Graphics Card",
+    descripcion: "Graphics card for 1440p gaming, with three fans (338 mm long).",
+  },
+  "GeForce RTX 5090 X3 OC": {
+    nombre: "GeForce RTX 5090 X3 OC Graphics Card",
+    descripcion: "The most powerful graphics card for 4K. Needs a 1000W power supply.",
+  },
+  "Terra Mini ITX": {
+    nombre: "Terra Mini ITX Case",
+    descripcion: "Compact 10.4 liter Mini-ITX case. SFX power supplies only and graphics cards up to 322 mm.",
+  },
+  "2800X RS-R ARGB": {
+    nombre: "2800X RS-R ARGB Case",
+    descripcion: "Case for micro ATX and Mini-ITX motherboards, with tempered glass.",
+  },
+  North: {
+    nombre: "North Case",
+    descripcion: "Mid Tower case with a wooden front. Graphics cards up to 355 mm.",
+  },
+  "North XL": {
+    nombre: "North XL Case",
+    descripcion: "Full Tower case for E-ATX motherboards and graphics cards up to 413 mm.",
+  },
+  "SF750 Platinum SFX": {
+    nombre: "SF750 Platinum SFX Power Supply",
+    descripcion: "750W SFX power supply for compact cases.",
+  },
+  "TR-KG850 Gold": {
+    nombre: "TR-KG850 Gold Power Supply",
+    descripcion: "850W ATX 3.1 modular power supply with a 12V-2x6 connector.",
+  },
+  "CX550 Bronze": {
+    nombre: "CX550 Bronze Power Supply",
+    descripcion: "550W ATX power supply for office or entry-level builds.",
+  },
+  "RM1000e Gold": {
+    nombre: "RM1000e Gold Power Supply",
+    descripcion: "1000W ATX 3.1 power supply for high-end graphics cards.",
+  },
+  "NV3 500GB NVMe": {
+    nombre: "NV3 500GB NVMe Drive",
+    descripcion: "500GB PCIe 4.0 NVMe solid state drive.",
+  },
+  "CS900 1TB SATA": {
+    nombre: "CS900 1TB SATA Drive",
+    descripcion: "1TB 2.5-inch SATA solid state drive.",
+  },
+  'Monitor Odyssey G5 27" 165Hz Curvo': {
+    nombre: 'Odyssey G5 27" 165Hz Curved Monitor',
+    descripcion: "27-inch curved QHD monitor at 165Hz for gaming.",
+  },
+  'Monitor GS27FA 27" 180Hz': {
+    nombre: 'GS27FA 27" 180Hz Monitor',
+    descripcion: "27-inch Full HD IPS monitor at 180Hz.",
+  },
+  'Monitor P2425D 24" QHD': {
+    nombre: 'P2425D 24" QHD Monitor',
+    descripcion: "24-inch QHD IPS monitor for work and study.",
   },
   // Otros productos
   "PC Gamer Ryzen 5 RTX 4060": {
@@ -1031,52 +1650,72 @@ async function main() {
   // Marca por nombre: la crea si no existe
   const marca = (nombre: string) => ({ connectOrCreate: { where: { nombre }, create: { nombre } } });
 
-  // Catálogo: solo se crea si todavía no hay productos
-  if ((await prisma.producto.count()) === 0) {
+  // Catálogo: se crean los productos que todavía no existen (se buscan por nombre).
+  // Así una base que ya tenía productos recibe los nuevos, sin duplicar ni pisar
+  // lo que el admin haya cambiado en los existentes.
+  const catalogoVacio = (await prisma.producto.count()) === 0;
+  const idsPorNombre = {} as Record<NombreProducto, number>;
+  const idExistente = async (nombre: string) =>
+    (await prisma.producto.findFirst({ where: { nombre }, select: { idProducto: true } }))?.idProducto;
+  let productosCreados = 0;
 
-    const idsPorNombre = {} as Record<NombreProducto, number>;
-    for (const c of componentes) {
-      const producto = await prisma.producto.create({
-        data: {
-          nombre: c.nombre,
-          descripcion: c.descripcion,
-          marca: marca(c.marca),
-          precio: c.precio,
-          stock: c.stock,
-          imagenUrl: "imagenUrl" in c ? c.imagenUrl : null,
-          categoria: { connect: { idCategoria: categorias[c.categoria] } },
-          componentePC: {
-            create: {
-              idTipoComponente: tipos[c.tipo],
-              wattsRequeridos: c.watts,
-              valoresAtributo: {
-                create: Object.entries(c.valores).map(([atributo, valor]) => ({
-                  idAtributo: atributos[c.tipo][atributo],
-                  valor: valor as string,
-                })),
-              },
+  for (const c of componentes) {
+    const existente = await idExistente(c.nombre);
+    if (existente) {
+      idsPorNombre[c.nombre] = existente;
+      continue;
+    }
+    const producto = await prisma.producto.create({
+      data: {
+        nombre: c.nombre,
+        descripcion: c.descripcion,
+        marca: marca(c.marca),
+        precio: c.precio,
+        stock: c.stock,
+        imagenUrl: "imagenUrl" in c ? c.imagenUrl : null,
+        categoria: { connect: { idCategoria: categorias[c.categoria] } },
+        componentePC: {
+          create: {
+            idTipoComponente: tipos[c.tipo],
+            wattsRequeridos: c.watts,
+            valoresAtributo: {
+              create: Object.entries(c.valores).map(([atributo, valor]) => ({
+                idAtributo: atributos[c.tipo][atributo],
+                valor: valor as string,
+              })),
             },
           },
         },
-      });
-      idsPorNombre[c.nombre] = producto.idProducto;
-    }
+      },
+    });
+    idsPorNombre[c.nombre] = producto.idProducto;
+    productosCreados++;
+  }
 
-    for (const p of otrosProductos) {
-      const producto = await prisma.producto.create({
-        data: {
-          nombre: p.nombre,
-          descripcion: p.descripcion,
-          marca: marca(p.marca),
-          precio: p.precio,
-          stock: p.stock,
-          imagenUrl: p.imagenUrl,
-          categoria: { connect: { idCategoria: categorias[p.categoria] } },
-        },
-      });
-      idsPorNombre[p.nombre] = producto.idProducto;
+  for (const p of otrosProductos) {
+    const existente = await idExistente(p.nombre);
+    if (existente) {
+      idsPorNombre[p.nombre] = existente;
+      continue;
     }
+    const producto = await prisma.producto.create({
+      data: {
+        nombre: p.nombre,
+        descripcion: p.descripcion,
+        marca: marca(p.marca),
+        precio: p.precio,
+        stock: p.stock,
+        imagenUrl: p.imagenUrl,
+        categoria: { connect: { idCategoria: categorias[p.categoria] } },
+      },
+    });
+    idsPorNombre[p.nombre] = producto.idProducto;
+    productosCreados++;
+  }
+  console.log(`Productos nuevos creados: ${productosCreados}.`);
 
+  // Tipos de notificacion y armado de ejemplo: solo en una base nueva
+  if (catalogoVacio) {
     await prisma.tipoNotificacion.createMany({ data: tiposNotificacion });
 
     const piezas: {
@@ -1112,13 +1751,31 @@ async function main() {
     const sinStock = [...componentes, ...otrosProductos]
       .filter((p) => p.stock === 0)
       .map((p) => p.nombre);
-    console.log(
-      `${componentes.length + otrosProductos.length} productos creados (${componentes.length} componentes de PC).`,
-    );
     console.log(`Sin stock: ${sinStock.join(", ")}`);
-  } else {
-    console.log("El catalogo ya existe, se saltea la creacion de productos.");
   }
+
+  // DATOS DE COMPATIBILIDAD: se ejecuta SIEMPRE, asi una base que ya tenia el catalogo
+  // recibe los atributos que usa el armador de PC (socket, formato, largo de GPU...).
+  // Solo toca los componentes del seed (por nombre); los cargados por el admin quedan igual.
+  let valoresSincronizados = 0;
+  for (const c of componentes) {
+    const componente = await prisma.componentePC.findFirst({
+      where: { producto: { nombre: c.nombre }, tipoComponente: { nombre: c.tipo } },
+      select: { idProducto: true },
+    });
+    if (!componente) continue;
+
+    for (const [atributo, valor] of Object.entries(c.valores) as [string, string][]) {
+      const idAtributo = atributos[c.tipo][atributo];
+      await prisma.valorAtributo.upsert({
+        where: { idProducto_idAtributo: { idProducto: componente.idProducto, idAtributo } },
+        create: { idProducto: componente.idProducto, idAtributo, valor },
+        update: { valor },
+      });
+      valoresSincronizados++;
+    }
+  }
+  console.log(`Atributos de compatibilidad sincronizados: ${valoresSincronizados}.`);
 
   // TRADUCCIONES: Se ejecuta SIEMPRE y guarda traduccionesEn en la tabla TraduccionProducto
   let traduccionesCargadas = 0;

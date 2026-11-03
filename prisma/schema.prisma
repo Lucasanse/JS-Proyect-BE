@@ -153,6 +153,7 @@ model Producto {
   marca     Marca     @relation(fields: [idMarca], references: [idMarca])
 
   componentePC  ComponentePC?
+  componentesPreset ComponentePreset[]
   itemsCarrito  ItemCarrito[]
   detallesVenta DetalleVenta[]
   favoritos     Favorito[]
@@ -173,8 +174,7 @@ model ComponentePC {
   producto       Producto       @relation(fields: [idProducto], references: [idProducto], onDelete: Cascade)
   tipoComponente TipoComponente @relation(fields: [idTipoComponente], references: [idTipoComponente])
 
-  valoresAtributo   ValorAtributo[]
-  componentesPreset ComponentePreset[]
+  valoresAtributo ValorAtributo[]
 
   @@map("componentes_pc")
 }
@@ -419,15 +419,17 @@ model Preset {
   @@map("presets")
 }
 
-// Tabla intermedia muchos a muchos entre Preset y ComponentePC.
+// Tabla intermedia muchos a muchos entre Preset y Producto.
+// Apunta a Producto (no a ComponentePC) porque un armado tambien puede llevar
+// perifericos (monitor, mouse, teclado...), que no son componentes de PC.
 // cantidad permite, por ejemplo, 2 modulos de RAM iguales en un mismo preset.
 model ComponentePreset {
   idPreset   Int @map("id_preset")
   idProducto Int @map("id_producto")
   cantidad   Int @default(1) @map("cantidad")
 
-  preset       Preset       @relation(fields: [idPreset], references: [idPreset], onDelete: Cascade)
-  componentePC ComponentePC @relation(fields: [idProducto], references: [idProducto])
+  preset   Preset   @relation(fields: [idPreset], references: [idPreset], onDelete: Cascade)
+  producto Producto @relation(fields: [idProducto], references: [idProducto])
 
   @@id([idPreset, idProducto])
   @@map("componentes_preset")
