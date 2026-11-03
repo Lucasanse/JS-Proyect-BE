@@ -5,6 +5,7 @@ import { errorHandler } from "./middlewares/errorHandler";
 import { apiRouter } from "./routes";
 import { auth } from "./lib/auth";
 import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
+import { iniciarCronCotizacion } from "./utils/cotizacion";
 import { CARPETA_UPLOADS } from "./middlewares/subirImagen";
 
 const app = express();
@@ -42,4 +43,5 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  iniciarCronCotizacion();
 });
