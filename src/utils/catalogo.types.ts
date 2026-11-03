@@ -62,7 +62,9 @@ export interface ProductoAdmin {
   nombre: string;
   descripcion: string;
   marca: { id: number; nombre: string };
-  precio: number;
+  precio: number; // en pesos
+  monedaBase: "USD" | "ARS"; // moneda en la que queda fijo el precio
+  precioUsd: number | null; // valor fijo en dolares (solo con monedaBase USD)
   stock: number;
   imagenUrl: string | null;
   activo: boolean;

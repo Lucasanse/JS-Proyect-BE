@@ -138,7 +138,11 @@ model Producto {
   idMarca     Int     @map("id_marca")
   nombre      String  @map("nombre")
   descripcion String  @map("descripcion") // texto en el idioma base (espanol)
-  precio      Decimal @map("precio") @db.Decimal(10, 2)
+  precio      Decimal @map("precio") @db.Decimal(10, 2) // siempre en pesos: es lo que se cobra
+  // Moneda en la que queda fijo el precio: "USD" (el valor real es precioUsd y "precio" se recalcula
+  // con la cotizacion cada vez que se actualiza) o "ARS" (el valor real es "precio" y no se mueve).
+  monedaBase  String   @default("ARS") @map("moneda_base")
+  precioUsd   Decimal? @map("precio_usd") @db.Decimal(10, 2)
   stock       Int     @map("stock")
   imagenUrl   String? @map("imagen_url")
   // Baja logica: un producto con ventas no se borra, se desactiva y deja de
@@ -264,12 +268,26 @@ model Venta {
   estado    String   @default("PENDIENTE") @map("estado")
 idPagoMp          String?  @unique @map("id_pago_mp") 
   metodoPago        String   @default("MERCADO_PAGO") @map("metodo_pago")
+  // Cotizacion del dolar vigente al emitir la venta (solo informativa, el cobro es en pesos)
+  cotizacionUsd   Decimal?  @map("cotizacion_usd") @db.Decimal(12, 2)
+  cotizacionFecha DateTime? @map("cotizacion_fecha")
   usuario        Usuario        @relation(fields: [idUsuario], references: [id])
   detalles       DetalleVenta[]
   factura        Factura?
   notificaciones Notificacion[]
 
   @@map("ventas")
+}
+
+// Ultima cotizacion del dolar obtenida de DolarApi.com. Una sola fila (id = 1), se actualiza con el cron.
+model Cotizacion {
+  id                  Int      @id @default(1) @map("id_cotizacion")
+  valor               Decimal  @map("valor") @db.Decimal(12, 2)
+  tipo                String   @map("tipo")
+  fechaActualizacion  DateTime @map("fecha_actualizacion") // fecha que informa DolarApi (cambia solo con el valor)
+  consultadaEn        DateTime @default(now()) @map("consultada_en") // ultima consulta exitosa a DolarApi
+
+  @@map("cotizaciones")
 }
 
 model DetalleVenta {

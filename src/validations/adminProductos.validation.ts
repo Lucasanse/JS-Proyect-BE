@@ -50,6 +50,8 @@ export const productoSchema = z.object({
   descripcion: texto("la descripción", 5000),
   idMarca: z.coerce.number({ error: "Elegí una marca" }).int().positive("Elegí una marca"),
   idCategoria: z.coerce.number({ error: "Elegí una categoría" }).int().positive("Elegí una categoría"),
+  // Moneda en la que el admin cargo "precio". En USD el producto queda anclado al dolar.
+  moneda: z.enum(["ARS", "USD"]).default("ARS"),
   // Decimal(10, 2) en la base
   precio: z.coerce
     .number({ error: "El precio debe ser un número" })
@@ -70,6 +72,7 @@ export const productoSchema = z.object({
 export const productoParcialSchema = z
   .object({
     ...productoSchema.shape,
+    moneda: z.enum(["ARS", "USD"]).optional(),
     imagenUrl: imagenUrlSchema,
     traduccionEn: traduccionSchema.nullable(),
     componente: componenteSchema.nullable(),

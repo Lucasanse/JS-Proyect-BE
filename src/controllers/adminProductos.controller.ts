@@ -1,3 +1,4 @@
+import { usdAPesos } from "../utils/cotizacion";
 import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../utils/prisma";
@@ -43,6 +44,8 @@ function mapearAdmin(p: ProductoConAdmin): ProductoAdmin {
     descripcion: p.descripcion,
     marca: { id: p.marca.idMarca, nombre: p.marca.nombre },
     precio: p.precio.toNumber(),
+    monedaBase: p.monedaBase === "USD" ? "USD" : "ARS",
+    precioUsd: p.precioUsd ? p.precioUsd.toNumber() : null,
     stock: p.stock,
     imagenUrl: p.imagenUrl,
     activo: p.activo,
@@ -156,6 +159,14 @@ async function liberarImagen(url: string | null) {
   if (enUso === 0) await borrarImagenLocal(url);
 }
 
+// "precio" viene en la moneda elegida, que pasa a ser la moneda base del producto (queda fijo en ella).
+// En USD se calcula el precio en pesos con la cotizacion.
+async function resolverPrecio(precio: number, moneda: "ARS" | "USD") {
+  return moneda === "USD"
+    ? { precio: await usdAPesos(precio), precioUsd: precio, monedaBase: "USD" }
+    : { precio, precioUsd: null, monedaBase: "ARS" };
+}
+
 // GET /api/admin/productos?q=&estado=todos|activos|inactivos&categoria=&page=&limit=
 // A diferencia del catalogo publico, incluye los productos inactivos.
 export async function listarProductosAdmin(req: Request, res: Response<Paginado<ProductoAdmin>>) {
@@ -198,7 +209,8 @@ export async function obtenerProductoAdmin(req: Request, res: Response<ProductoA
 
 // POST /api/admin/productos
 export async function crearProducto(req: Request, res: Response<ProductoAdmin>) {
-  const { traduccionEn, componente, ...datos } = productoSchema.parse(req.body);
+  const { traduccionEn, componente, moneda, ...resto } = productoSchema.parse(req.body);
+  const datos = { ...resto, ...(await resolverPrecio(resto.precio, moneda)) };
   await validarCategoriaYMarca(datos.idCategoria, datos.idMarca);
 
   const { idProducto } = await prisma.$transaction(async (tx) => {
@@ -216,7 +228,9 @@ export async function crearProducto(req: Request, res: Response<ProductoAdmin>) 
 export async function actualizarProducto(req: Request, res: Response<ProductoAdmin>) {
   const { id } = idParamSchema.parse(req.params);
   const schema = req.method === "PUT" ? productoSchema : productoParcialSchema;
-  const { traduccionEn, componente, ...datos } = schema.parse(req.body);
+  const { traduccionEn, componente, moneda, ...resto } = schema.parse(req.body);
+  // Al cambiar el precio se define de nuevo su moneda; si solo se cambia la moneda se ignora
+  const datos = resto.precio === undefined ? resto : { ...resto, ...(await resolverPrecio(resto.precio, moneda ?? "ARS")) };
   const anterior = await buscarProducto(id);
   await validarCategoriaYMarca(datos.idCategoria, datos.idMarca);
 
