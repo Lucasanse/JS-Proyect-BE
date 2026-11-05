@@ -266,7 +266,8 @@ export async function agregarArmadoAlCarrito(req: Request, res: Response) {
     for (const { producto, cantidad: aAgregar } of cargados) {
       const clave = { idCarrito_idProducto: { idCarrito: carrito.idCarrito, idProducto: producto.id } };
       const existente = await tx.itemCarrito.findUnique({ where: clave });
-      const cantidad = (existente?.cantidad ?? 0) + aAgregar;
+      // Un servicio va una sola vez, aunque se agregue otro armado que tambien lo tenga
+      const cantidad = producto.paso === PASO_SERVICIOS ? 1 : (existente?.cantidad ?? 0) + aAgregar;
       if (cantidad > producto.stock) {
         throw new AppError(400, `Stock insuficiente de "${producto.nombre}". Disponible: ${producto.stock}`);
       }

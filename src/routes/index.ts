@@ -12,6 +12,7 @@ import * as analisisIA from "../controllers/analisisIA.controller";
 import * as servicioTecnico from "../controllers/servicioTecnico.controller";
 import * as adminServicioTecnico from "../controllers/adminServicioTecnico.controller";
 import * as adminUsuarios from "../controllers/adminUsuarios.controller";
+import * as adminServicios from "../controllers/adminServicios.controller";
 import { requireAdmin, requireAuth } from "../middlewares/auth";
 import { subirFotosIA, subirImagen } from "../middlewares/subirImagen";
 import {
@@ -141,6 +142,10 @@ adminRouter.get("/servicio-tecnico", adminServicioTecnico.listarSolicitudes);
 adminRouter.get("/servicio-tecnico/:id", adminServicioTecnico.obtenerSolicitud);
 adminRouter.post("/servicio-tecnico/:id/respuestas", adminServicioTecnico.responderSolicitud);
 adminRouter.patch("/servicio-tecnico/:id/estado", adminServicioTecnico.cambiarEstadoSolicitud);
+
+// Servicios del armador (armado de PC, instalacion de Windows...): precio y activo
+adminRouter.get("/servicios", adminServicios.listarServiciosAdmin);
+adminRouter.patch("/servicios/:id", adminServicios.actualizarServicio);
 
 // Usuarios: consulta y habilitacion de cuentas
 adminRouter.get("/usuarios", adminUsuarios.listarUsuarios);
