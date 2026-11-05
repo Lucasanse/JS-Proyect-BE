@@ -3,6 +3,7 @@ import * as productos from "../controllers/productos.controller";
 import * as productoDetalle from "../controllers/productoDetalle.controller";
 import * as categorias from "../controllers/categorias.controller";
 import * as carrito from "../controllers/carrito.controller";
+import * as armador from "../controllers/armador.controller";
 import * as cotizacion from "../controllers/cotizacion.controller";
 import * as idioma from "../controllers/idioma.controller";
 import * as adminProductos from "../controllers/adminProductos.controller";
@@ -11,6 +12,7 @@ import * as analisisIA from "../controllers/analisisIA.controller";
 import * as servicioTecnico from "../controllers/servicioTecnico.controller";
 import * as adminServicioTecnico from "../controllers/adminServicioTecnico.controller";
 import * as adminUsuarios from "../controllers/adminUsuarios.controller";
+import * as adminServicios from "../controllers/adminServicios.controller";
 import { requireAdmin, requireAuth } from "../middlewares/auth";
 import { subirFotosIA, subirImagen } from "../middlewares/subirImagen";
 import {
@@ -54,6 +56,16 @@ apiRouter.patch(
 );
 apiRouter.delete("/carrito/items/:idProducto", requireAuth, carrito.quitarItem);
 apiRouter.delete("/carrito", requireAuth, carrito.vaciarCarrito);
+
+// Armador de PC: elegir y validar es publico; agregar al carrito y guardar requieren sesion
+apiRouter.post("/armador/compatibles", armador.listarCompatibles);
+apiRouter.post("/armador/validar", armador.validarArmado);
+apiRouter.post("/armador/fuente-sugerida", armador.sugerirFuente);
+apiRouter.get("/armador/servicios", armador.listarServicios);
+apiRouter.post("/armador/carrito", requireAuth, armador.agregarArmadoAlCarrito);
+apiRouter.get("/armador/presets", requireAuth, armador.listarPresets);
+apiRouter.post("/armador/presets", requireAuth, armador.guardarPreset);
+apiRouter.delete("/armador/presets/:id", requireAuth, armador.eliminarPreset);
 
 // Servicio tecnico del cliente (requiere sesion iniciada; cada uno ve solo las suyas)
 apiRouter.post("/servicio-tecnico", requireAuth, servicioTecnico.crearSolicitud);
@@ -130,6 +142,10 @@ adminRouter.get("/servicio-tecnico", adminServicioTecnico.listarSolicitudes);
 adminRouter.get("/servicio-tecnico/:id", adminServicioTecnico.obtenerSolicitud);
 adminRouter.post("/servicio-tecnico/:id/respuestas", adminServicioTecnico.responderSolicitud);
 adminRouter.patch("/servicio-tecnico/:id/estado", adminServicioTecnico.cambiarEstadoSolicitud);
+
+// Servicios del armador (armado de PC, instalacion de Windows...): precio y activo
+adminRouter.get("/servicios", adminServicios.listarServiciosAdmin);
+adminRouter.patch("/servicios/:id", adminServicios.actualizarServicio);
 
 // Usuarios: consulta y habilitacion de cuentas
 adminRouter.get("/usuarios", adminUsuarios.listarUsuarios);

@@ -3,6 +3,7 @@ import { prisma } from "../utils/prisma";
 import { AppError } from "../utils/AppError";
 import { includeResumen, mapearResumen } from "../utils/producto.mapper";
 import type { CarritoDetalle } from "../utils/catalogo.types";
+import { CATEGORIA_SERVICIOS } from "../utils/armador.compatibilidad";
 import {
   agregarItemSchema,
   idProductoParamSchema,
@@ -23,11 +24,21 @@ export async function obtenerOCrearCarrito(idUsuario: number) {
 }
 
 async function buscarProducto(idProducto: number) {
-  const producto = await prisma.producto.findUnique({ where: { idProducto } });
+  const producto = await prisma.producto.findUnique({
+    where: { idProducto },
+    include: { categoria: { select: { nombre: true } } },
+  });
   if (!producto) throw new AppError(404, "Producto no encontrado");
   if (!producto.activo)
     throw new AppError(400, "El producto ya no está disponible");
   return producto;
+}
+
+// Los servicios (armado de PC, instalacion de Windows...) van una sola vez por carrito
+function validarCantidadServicio(producto: Awaited<ReturnType<typeof buscarProducto>>, cantidad: number) {
+  if (producto.categoria.nombre === CATEGORIA_SERVICIOS && cantidad > 1) {
+    throw new AppError(400, `"${producto.nombre}" se puede agregar una sola vez`);
+  }
 }
 
 // Arma la respuesta con el detalle de cada item y el total.
@@ -83,6 +94,7 @@ export async function agregarItem(req: Request, res: Response<CarritoDetalle>) {
     },
   });
   const nuevaCantidad = (existente?.cantidad ?? 0) + cantidad;
+  validarCantidadServicio(producto, nuevaCantidad);
 
   if (nuevaCantidad > producto.stock) {
     throw new AppError(
@@ -116,6 +128,7 @@ export async function modificarCantidad(
   const { cantidad } = modificarCantidadSchema.parse(req.body);
   const carrito = await obtenerOCrearCarrito(idUsuarioDe(req));
   const producto = await buscarProducto(idProducto);
+  validarCantidadServicio(producto, cantidad);
 
   if (cantidad > producto.stock) {
     throw new AppError(
