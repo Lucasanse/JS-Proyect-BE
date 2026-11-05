@@ -28,6 +28,7 @@ const CATEGORIAS = [
   "Sillas Gamer",
   "Insumos",
   "Random",
+  "Servicios",
 ] as const;
 type NombreCategoria = (typeof CATEGORIAS)[number];
 
@@ -1327,6 +1328,32 @@ const otrosProductos = [
     descripcion: "Memoria USB 3.2 de 64GB.",
     imagenUrl: "https://m.media-amazon.com/images/I/61abRJNk3cL._AC_.jpg",
   },
+  // Servicios: se ofrecen en el armador de PC, no en el catalogo. No son fisicos, por eso
+  // tienen stock alto (el carrito y el checkout igual lo controlan).
+  {
+    categoria: "Servicios",
+    nombre: "Armado de PC (No incluye instalación de sistema operativo)",
+    marca: "Servicio",
+    precio: 3050,
+    stock: 999,
+    descripcion: "Armamos tu PC con los componentes elegidos. No incluye la instalación del sistema operativo.",
+  },
+  {
+    categoria: "Servicios",
+    nombre: "Instalación de Windows",
+    marca: "Servicio",
+    precio: 4500,
+    stock: 999,
+    descripcion: "Instalamos Windows en tu PC armada, con los drivers actualizados. No incluye la licencia.",
+  },
+  {
+    categoria: "Servicios",
+    nombre: "Instalación de paquete Office",
+    marca: "Servicio",
+    precio: 2500,
+    stock: 999,
+    descripcion: "Instalamos el paquete Office en tu PC armada. No incluye la licencia.",
+  },
 ] as const satisfies readonly ProductoSeed[];
 
 type NombreProducto =
@@ -1524,6 +1551,19 @@ const traduccionesEn: Partial<
     nombre: '24" 144Hz Gaming Monitor',
     descripcion: "24-inch Full HD monitor at 144Hz.",
   },
+  // Servicios
+  "Armado de PC (No incluye instalación de sistema operativo)": {
+    nombre: "PC assembly (operating system installation not included)",
+    descripcion: "We assemble your PC with the chosen parts. Operating system installation is not included.",
+  },
+  "Instalación de Windows": {
+    nombre: "Windows installation",
+    descripcion: "We install Windows on your assembled PC, with up-to-date drivers. License not included.",
+  },
+  "Instalación de paquete Office": {
+    nombre: "Office suite installation",
+    descripcion: "We install the Office suite on your assembled PC. License not included.",
+  },
 };
 const tiposNotificacion = [
   {
@@ -1705,7 +1745,7 @@ async function main() {
         marca: marca(p.marca),
         precio: p.precio,
         stock: p.stock,
-        imagenUrl: p.imagenUrl,
+        imagenUrl: "imagenUrl" in p ? p.imagenUrl : null,
         categoria: { connect: { idCategoria: categorias[p.categoria] } },
       },
     });

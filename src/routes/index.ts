@@ -60,6 +60,7 @@ apiRouter.delete("/carrito", requireAuth, carrito.vaciarCarrito);
 apiRouter.post("/armador/compatibles", armador.listarCompatibles);
 apiRouter.post("/armador/validar", armador.validarArmado);
 apiRouter.post("/armador/fuente-sugerida", armador.sugerirFuente);
+apiRouter.get("/armador/servicios", armador.listarServicios);
 apiRouter.post("/armador/carrito", requireAuth, armador.agregarArmadoAlCarrito);
 apiRouter.get("/armador/presets", requireAuth, armador.listarPresets);
 apiRouter.post("/armador/presets", requireAuth, armador.guardarPreset);
