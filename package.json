@@ -11,8 +11,7 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down",
-    "test": "tsx --test \"src/**/*.test.ts\""
+    "docker:down": "docker compose down"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.7",

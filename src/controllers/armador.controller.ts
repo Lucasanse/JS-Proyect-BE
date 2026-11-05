@@ -6,7 +6,9 @@ import { crearIncludeResumen, mapearResumen } from "../utils/producto.mapper";
 import { detalleCarrito, obtenerOCrearCarrito } from "./carrito.controller";
 import {
   CATEGORIAS_PERIFERICOS,
+  CATEGORIA_SERVICIOS,
   PASO_PERIFERICOS,
+  PASO_SERVICIOS,
   calcularPotencia,
   esTipoArmador,
   incompatibilidadesDe,
@@ -74,16 +76,23 @@ const tipoArmadorDe = (p: ProductoConAtributos) => {
 };
 
 const esPeriferico = (p: ProductoConAtributos) => !p.componentePC && CATEGORIAS_PERIFERICOS.includes(p.categoria.nombre);
+const esServicio = (p: ProductoConAtributos) => !p.componentePC && p.categoria.nombre === CATEGORIA_SERVICIOS;
 
-// Se puede usar en el armador: un componente de alguno de los pasos o un periferico
+// Se puede usar en el armador: un componente de alguno de los pasos o un periferico.
+// Los servicios no se guardan en los armados: se eligen al comprar.
 const esDelArmador = (p: ProductoConAtributos) => !!tipoArmadorDe(p) || esPeriferico(p);
 
 function mapearArmador(p: ProductoConAtributos, cantidad = 1): ProductoCargado {
   const tipo = tipoArmadorDe(p);
   if (!p.componentePC || !tipo) {
-    if (!esPeriferico(p)) throw new AppError(400, `"${p.nombre}" no se puede usar en el armador`);
+    if (!esPeriferico(p) && !esServicio(p)) throw new AppError(400, `"${p.nombre}" no se puede usar en el armador`);
     return {
-      producto: { ...mapearResumen(p), paso: PASO_PERIFERICOS, watts: 0, especificaciones: [] },
+      producto: {
+        ...mapearResumen(p),
+        paso: esServicio(p) ? PASO_SERVICIOS : PASO_PERIFERICOS,
+        watts: 0,
+        especificaciones: [],
+      },
       cantidad,
       componente: null,
     };
@@ -228,6 +237,18 @@ export async function sugerirFuente(req: Request, res: Response<FuenteSugeridaRe
     .map((c) => c.producto);
 
   res.json({ potencia, fuentes });
+}
+
+// GET /api/armador/servicios?lang=
+// Servicios que se pueden sumar al armado al comprarlo (armado, instalacion de Windows...)
+export async function listarServicios(req: Request, res: Response<ProductoArmador[]>) {
+  const { lang } = langQuerySchema.parse(req.query);
+  const servicios = await prisma.producto.findMany({
+    where: { activo: true, componentePC: null, categoria: { nombre: CATEGORIA_SERVICIOS } },
+    include: crearIncludeArmador(lang),
+    orderBy: { idProducto: "asc" },
+  });
+  res.json(servicios.map((p) => mapearArmador(p).producto));
 }
 
 // POST /api/armador/carrito  { seleccion }
