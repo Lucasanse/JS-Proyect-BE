@@ -45,6 +45,7 @@ model Usuario {
   presets             Preset[]
   favoritos           Favorito[]
   passwordResetTokens PasswordResetToken[]
+  documentos          Documento[]
 
   // Relaciones de Better Auth
   sesiones Sesion[]
@@ -274,6 +275,8 @@ idPagoMp          String?  @unique @map("id_pago_mp")
   usuario        Usuario        @relation(fields: [idUsuario], references: [id])
   detalles       DetalleVenta[]
   factura        Factura?
+  // Factura en PDF (se genera sola al acreditarse el pago, ver src/utils/documentos.ts)
+  documento      Documento?
   notificaciones Notificacion[]
 
   @@map("ventas")
@@ -388,7 +391,7 @@ model TipoNotificacion {
 }
 
 // FKs reales y opcionales al origen de la notificacion. Un CHECK en la
-// migracion obliga a que exactamente una de las dos (idVenta / idSolicitud)
+// migracion obliga a que exactamente una (idVenta / idSolicitud / idDocumento)
 // este cargada. Si aparece otro origen, se agrega su FK explicitamente.
 model Notificacion {
   idNotificacion     Int      @id @default(autoincrement()) @map("id_notificacion")
@@ -396,6 +399,7 @@ model Notificacion {
   idTipoNotificacion Int      @map("id_tipo_notificacion")
   idVenta            Int?     @map("id_venta")
   idSolicitud        Int?     @map("id_solicitud")
+  idDocumento        Int?     @map("id_documento")
   leida              Boolean  @default(false) @map("leida")
   fecha              DateTime @default(now()) @map("fecha")
 
@@ -403,8 +407,34 @@ model Notificacion {
   tipoNotificacion TipoNotificacion   @relation(fields: [idTipoNotificacion], references: [idTipoNotificacion])
   venta            Venta?             @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
   solicitud        SolicitudServicio? @relation(fields: [idSolicitud], references: [idSolicitud], onDelete: Cascade)
+  documento        Documento?         @relation(fields: [idDocumento], references: [idDocumento], onDelete: Cascade)
 
   @@map("notificaciones")
+}
+
+// Presupuestos y facturas en PDF. Los datos (items, cliente, total) quedan guardados
+// como estaban al emitirse, asi el PDF se puede volver a generar igual si falta el archivo.
+// Logica en src/utils/documentos.ts; formato del PDF en src/utils/pdf/plantillaDocumento.ts.
+model Documento {
+  idDocumento Int      @id @default(autoincrement()) @map("id_documento")
+  tipo        String   @map("tipo") // PRESUPUESTO | FACTURA
+  idUsuario   Int      @map("id_usuario")
+  idVenta     Int?     @unique @map("id_venta") // solo facturas: una por venta
+  origen      String   @map("origen") // CARRITO | PRESET | ARMADO (presupuestos) | VENTA (facturas)
+  numero      Int      @map("numero") // correlativo por tipo; se muestra como 0001-00000012
+  fecha       DateTime @default(now()) @map("fecha")
+  items       Json     @map("items") // [{ idProducto, nombre, cantidad, precioUnitario, subtotal }]
+  cliente     Json     @map("cliente") // { nombre, correo, direccion, telefono }
+  total       Decimal  @map("total") @db.Decimal(12, 2)
+  rutaArchivo String   @map("ruta_archivo") // relativa a la carpeta "documentos" del BE
+
+  usuario        Usuario        @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
+  venta          Venta?         @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
+  notificaciones Notificacion[]
+
+  @@unique([tipo, numero])
+  @@index([idUsuario, tipo])
+  @@map("documentos")
 }
 
 model Preset {
