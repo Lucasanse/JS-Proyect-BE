@@ -1582,6 +1582,14 @@ const tiposNotificacion = [
     codigo: "SOLICITUD_DIAGNOSTICADA",
     plantillaMensaje: "Tu solicitud #{idSolicitud} ya tiene diagnostico.",
   },
+  {
+    codigo: "PRESUPUESTO_DISPONIBLE",
+    plantillaMensaje: "Tu presupuesto N° {numero} está listo para descargar.",
+  },
+  {
+    codigo: "FACTURA_DISPONIBLE",
+    plantillaMensaje: "La factura N° {numero} de tu compra #{idVenta} está disponible.",
+  },
 ];
 
 // Object.entries pierde el tipo de las claves; este helper lo conserva.
@@ -1756,7 +1764,8 @@ async function main() {
 
   // Tipos de notificacion y armado de ejemplo: solo en una base nueva
   if (catalogoVacio) {
-    await prisma.tipoNotificacion.createMany({ data: tiposNotificacion });
+    // skipDuplicates: la migracion de documentos ya inserta los tipos PRESUPUESTO/FACTURA_DISPONIBLE
+    await prisma.tipoNotificacion.createMany({ data: tiposNotificacion, skipDuplicates: true });
 
     const piezas: {
       nombre: (typeof componentes)[number]["nombre"];

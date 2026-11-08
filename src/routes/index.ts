@@ -13,6 +13,7 @@ import * as servicioTecnico from "../controllers/servicioTecnico.controller";
 import * as adminServicioTecnico from "../controllers/adminServicioTecnico.controller";
 import * as adminUsuarios from "../controllers/adminUsuarios.controller";
 import * as adminServicios from "../controllers/adminServicios.controller";
+import * as documentos from "../controllers/documentos.controller";
 import { requireAdmin, requireAuth } from "../middlewares/auth";
 import { subirFotosIA, subirImagen } from "../middlewares/subirImagen";
 import {
@@ -87,6 +88,12 @@ apiRouter.post("/checkout/unidad", requireAuth, crearOrdenPorUnidad);
 apiRouter.get("/compras/:idUsuario", obtenerHistorialCompras);
 
 apiRouter.post("/webhooks/mercadopago", recibidorDeWebHookMP);
+
+// Presupuestos y facturas en PDF (cada usuario solo accede a los suyos)
+apiRouter.post("/quotes", requireAuth, documentos.generarPresupuesto);
+apiRouter.get("/quotes", requireAuth, documentos.listarPresupuestos);
+apiRouter.get("/quotes/:id/download", requireAuth, documentos.descargarPresupuesto);
+apiRouter.get("/orders/:id/invoice", requireAuth, documentos.descargarFactura);
 
 //Notificaciones
 apiRouter.patch(

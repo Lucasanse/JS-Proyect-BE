@@ -2,6 +2,7 @@ import { error } from "node:console";
 import { prisma } from "../utils/prisma";
 import { crearNotificacionCompra } from "../utils/notificaciones";
 import { cotizacionParaVenta } from "../utils/cotizacion";
+import { emitirFacturaSinFallar } from "../utils/documentos";
 
 export async function procesarCompraAprobadaUnidad(
   idUsuario: number,
@@ -58,6 +59,8 @@ export async function procesarCompraAprobadaUnidad(
     return nuevaVenta;
   });
   crearNotificacionCompra(idUsuario, resultadoVenta.idVenta);
+  // Pago acreditado: se genera la factura en PDF (una sola vez por venta)
+  emitirFacturaSinFallar(resultadoVenta.idVenta);
   return resultadoVenta;
 }
 
@@ -134,5 +137,7 @@ export async function procesarCompraAprobadaCarrito(
     return nuevaVenta;
   });
   crearNotificacionCompra(idUsuario, resultadoVenta.idVenta);
+  // Pago acreditado: se genera la factura en PDF (una sola vez por venta)
+  emitirFacturaSinFallar(resultadoVenta.idVenta);
   return resultadoVenta;
 }
