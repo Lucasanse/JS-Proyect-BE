@@ -6,7 +6,9 @@ import { crearIncludeResumen, mapearResumen } from "../utils/producto.mapper";
 import { detalleCarrito, obtenerOCrearCarrito } from "./carrito.controller";
 import {
   CATEGORIAS_PERIFERICOS,
+  CATEGORIA_MONITORES,
   CATEGORIA_SERVICIOS,
+  PASO_MONITOR,
   PASO_PERIFERICOS,
   PASO_SERVICIOS,
   calcularPotencia,
@@ -75,7 +77,9 @@ const tipoArmadorDe = (p: ProductoConAtributos) => {
   return tipo && esTipoArmador(tipo) ? tipo : null;
 };
 
-const esPeriferico = (p: ProductoConAtributos) => !p.componentePC && CATEGORIAS_PERIFERICOS.includes(p.categoria.nombre);
+const esMonitor = (p: ProductoConAtributos) => !p.componentePC && p.categoria.nombre === CATEGORIA_MONITORES;
+const esPeriferico = (p: ProductoConAtributos) =>
+  esMonitor(p) || (!p.componentePC && CATEGORIAS_PERIFERICOS.includes(p.categoria.nombre));
 const esServicio = (p: ProductoConAtributos) => !p.componentePC && p.categoria.nombre === CATEGORIA_SERVICIOS;
 
 // Se puede usar en el armador: un componente de alguno de los pasos o un periferico.
@@ -89,7 +93,7 @@ function mapearArmador(p: ProductoConAtributos, cantidad = 1): ProductoCargado {
     return {
       producto: {
         ...mapearResumen(p),
-        paso: esServicio(p) ? PASO_SERVICIOS : PASO_PERIFERICOS,
+        paso: esServicio(p) ? PASO_SERVICIOS : esMonitor(p) ? PASO_MONITOR : PASO_PERIFERICOS,
         watts: 0,
         especificaciones: [],
       },
@@ -168,14 +172,15 @@ function rechazar(res: Response, error: string, validacion: ValidacionArmado) {
 
 // POST /api/armador/compatibles?lang=  { seleccion: [{ idProducto, cantidad }], tipo }
 // Productos del paso "tipo" separados en compatibles e incompatibles (con el motivo) con lo ya elegido.
-// tipo "Perifericos": monitores, mouses, teclados... todos compatibles.
+// tipo "Monitor" o "Perifericos" (mouses, teclados...): todos compatibles.
 export async function listarCompatibles(req: Request, res: Response<CompatiblesRespuesta>) {
   const { lang } = langQuerySchema.parse(req.query);
   const { seleccion, tipo } = compatiblesSchema.parse(req.body);
 
-  if (tipo === PASO_PERIFERICOS) {
+  if (tipo === PASO_MONITOR || tipo === PASO_PERIFERICOS) {
+    const categorias = tipo === PASO_MONITOR ? [CATEGORIA_MONITORES] : CATEGORIAS_PERIFERICOS;
     const perifericos = await prisma.producto.findMany({
-      where: { activo: true, componentePC: null, categoria: { nombre: { in: CATEGORIAS_PERIFERICOS } } },
+      where: { activo: true, componentePC: null, categoria: { nombre: { in: categorias } } },
       include: crearIncludeArmador(lang),
       orderBy: [{ categoria: { nombre: "asc" } }, { precio: "asc" }, { idProducto: "asc" }],
     });
