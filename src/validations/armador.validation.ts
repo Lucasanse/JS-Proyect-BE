@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PASO_PERIFERICOS, TIPOS_ARMADOR } from "../utils/armador.compatibilidad";
+import { PASO_MONITOR, PASO_PERIFERICOS, TIPOS_ARMADOR } from "../utils/armador.compatibilidad";
 
 // Un componente por paso, varios discos y, en el paso opcional, varios perifericos
 const MAXIMO_PRODUCTOS = TIPOS_ARMADOR.length + 20;
@@ -26,7 +26,7 @@ export const langQuerySchema = z.object({
 // POST /api/armador/compatibles
 export const compatiblesSchema = z.object({
   seleccion: seleccionSchema.default([]),
-  tipo: z.enum([...TIPOS_ARMADOR, PASO_PERIFERICOS]),
+  tipo: z.enum([...TIPOS_ARMADOR, PASO_MONITOR, PASO_PERIFERICOS]),
 });
 
 // POST /api/armador/validar, /fuente-sugerida y /carrito
