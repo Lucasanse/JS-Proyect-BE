@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import PDFDocument from "pdfkit";
-import { addDays, format } from "date-fns";
+import { format } from "date-fns";
 import { COMERCIO } from "./comercio";
 import type { DatosPdf } from "../documentos.types";
 
@@ -131,9 +131,6 @@ function encabezado(doc: Doc, f: Fuentes, datos: DatosPdf) {
     ["N°", datos.numero],
     ["Fecha", fecha(datos.fecha)],
   ];
-  if (datos.tipo === "PRESUPUESTO") {
-    detalles.push(["Válido hasta", fecha(addDays(datos.fecha, COMERCIO.validezPresupuestoDias))]);
-  }
   if (datos.referencia) detalles.push(["Referencia", datos.referencia]);
 
   const altoTitulo = 28;
@@ -272,10 +269,7 @@ function bloqueTotal(doc: Doc, f: Fuentes, datos: DatosPdf, yInicial: number) {
 }
 
 function leyenda(doc: Doc, f: Fuentes, datos: DatosPdf, yInicial: number) {
-  const texto =
-    datos.tipo === "PRESUPUESTO"
-      ? `${COMERCIO.leyendaPresupuesto} Válido por ${COMERCIO.validezPresupuestoDias} días desde su emisión.`
-      : COMERCIO.leyendaFactura;
+  const texto = datos.tipo === "PRESUPUESTO" ? COMERCIO.leyendaPresupuesto : COMERCIO.leyendaFactura;
   const opciones = { width: anchoUtil(doc) };
   doc.font(f.normal).fontSize(8.5);
   const y = asegurarEspacio(doc, yInicial, doc.heightOfString(texto, opciones));
