@@ -33,9 +33,8 @@ export const COMERCIO = {
     negrita: undefined as string | undefined,
   },
 
-  validezPresupuestoDias: 7,
   leyendaPresupuesto:
-    "Este presupuesto no constituye una factura ni reserva stock. Los precios están expresados en pesos argentinos y pueden variar según disponibilidad.",
+    "Este presupuesto no constituye una factura ni reserva stock. Los precios están expresados en pesos argentinos y pueden variar según disponibilidad, si finaliza una oferta o si hay aumentos de precio.",
   // Para emitir facturas fiscales hace falta el CAE de ARCA (ex AFIP); mientras tanto se aclara en el PDF.
   leyendaFactura: "Comprobante no válido como factura fiscal.",
 };
