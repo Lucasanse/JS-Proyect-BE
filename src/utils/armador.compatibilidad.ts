@@ -15,14 +15,18 @@ export const esTipoArmador = (tipo: string): tipo is TipoArmador =>
 // Paso opcional del final: perifericos (monitor, mouse, teclado...). No son componentes de PC,
 // no tienen reglas de compatibilidad ni consumo, y se puede elegir mas de uno.
 export const PASO_PERIFERICOS = "Perifericos";
-export const CATEGORIAS_PERIFERICOS = ["Monitores", "Teclados", "Mouse", "Auriculares", "Perifericos"];
+export const CATEGORIAS_PERIFERICOS = ["Teclados", "Mouse", "Auriculares", "Perifericos"];
+
+// El monitor tiene su propio paso opcional (antes de los demas perifericos), con las mismas reglas
+export const PASO_MONITOR = "Monitor";
+export const CATEGORIA_MONITORES = "Monitores";
 
 // Servicios que se suman al armado (armado de la PC, instalacion de Windows...). Son productos
 // de esta categoria: se cobran como cualquier otro, pero no aparecen en el catalogo.
 export const PASO_SERVICIOS = "Servicios";
 export const CATEGORIA_SERVICIOS = "Servicios";
 
-export type PasoArmador = TipoArmador | typeof PASO_PERIFERICOS | typeof PASO_SERVICIOS;
+export type PasoArmador = TipoArmador | typeof PASO_MONITOR | typeof PASO_PERIFERICOS | typeof PASO_SERVICIOS;
 
 // En estos pasos se pueden elegir varios productos distintos (ej. un NVMe y un disco rigido),
 // mientras entren en las conexiones del motherboard
