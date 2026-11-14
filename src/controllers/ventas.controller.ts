@@ -85,7 +85,7 @@ export async function procesarCompraAprobadaCarrito(
 
     const carrito = await tx.carrito.findUnique({
       where: { idUsuario },
-      include: { items: { include: { producto: true } } },
+      include: { items: { include: { producto: true, servicio: true } } },
     });
 
     if (!carrito || carrito.items.length === 0) {
@@ -94,14 +94,17 @@ export async function procesarCompraAprobadaCarrito(
 
     //Armamos lo que va en la tabla detalleVenta
     let totalVenta = 0;
+    // Cada item es un producto o un servicio del armador (armado de PC, instalacion de Windows...)
     const detallesParaInsertar = carrito.items.map((item) => {
-      const subtotal = Number(item.producto.precio) * item.cantidad;
+      const precio = item.producto ? item.producto.precio : (item.servicio?.precio ?? 0);
+      const subtotal = Number(precio) * item.cantidad;
       totalVenta += subtotal;
 
       return {
         idProducto: item.idProducto,
+        idServicio: item.idServicio,
         cantidad: item.cantidad,
-        precioUnitario: item.producto.precio,
+        precioUnitario: precio,
       };
     });
 
@@ -120,9 +123,10 @@ export async function procesarCompraAprobadaCarrito(
       },
     });
 
-    //Descontamos el stock de cada producto vendido
+    //Descontamos el stock de cada producto vendido (los servicios no tienen stock)
 
     for (const item of carrito.items) {
+      if (!item.idProducto) continue;
       await tx.producto.update({
         where: { idProducto: item.idProducto },
         data: { stock: { decrement: item.cantidad } },

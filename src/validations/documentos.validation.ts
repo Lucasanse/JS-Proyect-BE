@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { serviciosSchema } from "./armador.validation";
 
 // POST /api/quotes: de donde salen los productos del presupuesto
 //   { origen: "carrito" }
 //   { origen: "preset", idPreset }               armado guardado del usuario
-//   { origen: "armado", seleccion: [...] }       armado en curso, sin guardar (incluye los servicios)
+//   { origen: "armado", seleccion: [...], servicios: [ids] }  armado en curso, sin guardar, con los servicios elegidos
 export const generarPresupuestoSchema = z.discriminatedUnion("origen", [
   z.object({ origen: z.literal("carrito") }),
   z.object({ origen: z.literal("preset"), idPreset: z.coerce.number().int().min(1) }),
@@ -16,12 +17,12 @@ export const generarPresupuestoSchema = z.discriminatedUnion("origen", [
           cantidad: z.coerce.number().int().min(1).max(99).default(1),
         }),
       )
-      .min(1, "El armado no tiene componentes")
       .max(50)
       .refine((s) => new Set(s.map((c) => c.idProducto)).size === s.length, {
         message: "Hay productos repetidos en la selección",
       }),
-  }),
+    servicios: serviciosSchema,
+  }).refine((d) => d.seleccion.length + d.servicios.length > 0, { message: "El armado no tiene componentes" }),
 ]);
 
 // :id en la URL (presupuesto o pedido)

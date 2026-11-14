@@ -2,11 +2,12 @@ import type { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { AppError } from "../utils/AppError";
 import { includeResumen, mapearResumen } from "../utils/producto.mapper";
-import type { CarritoDetalle } from "../utils/catalogo.types";
-import { CATEGORIA_SERVICIOS } from "../utils/armador.compatibilidad";
+import type { CarritoDetalle, ItemCarritoDetalle } from "../utils/catalogo.types";
+import { crearIncludeServicio, mapearServicioResumen } from "../utils/servicios";
 import {
   agregarItemSchema,
   idProductoParamSchema,
+  idServicioParamSchema,
   modificarCantidadSchema,
 } from "../validations/carrito.validation";
 
@@ -34,30 +35,23 @@ async function buscarProducto(idProducto: number) {
   return producto;
 }
 
-// Los servicios (armado de PC, instalacion de Windows...) van una sola vez por carrito
-function validarCantidadServicio(producto: Awaited<ReturnType<typeof buscarProducto>>, cantidad: number) {
-  if (producto.categoria.nombre === CATEGORIA_SERVICIOS && cantidad > 1) {
-    throw new AppError(400, `"${producto.nombre}" se puede agregar una sola vez`);
-  }
-}
-
-// Arma la respuesta con el detalle de cada item y el total.
+// Arma la respuesta con el detalle de cada item (producto o servicio) y el total.
 export async function detalleCarrito(
   idCarrito: number,
 ): Promise<CarritoDetalle> {
   const items = await prisma.itemCarrito.findMany({
     where: { idCarrito },
-    include: { producto: { include: includeResumen } },
+    include: { producto: { include: includeResumen }, servicio: { include: crearIncludeServicio() } },
     orderBy: { idItemCarrito: "asc" },
   });
 
-  const detalle = items.map((i) => {
-    const producto = mapearResumen(i.producto);
-    return {
-      producto,
-      cantidad: i.cantidad,
-      subtotal: producto.precio * i.cantidad,
-    };
+  const detalle = items.map((i): ItemCarritoDetalle => {
+    if (i.servicio) {
+      const servicio = mapearServicioResumen(i.servicio);
+      return { tipo: "SERVICIO", producto: null, servicio, cantidad: i.cantidad, subtotal: servicio.precio * i.cantidad };
+    }
+    const producto = mapearResumen(i.producto!);
+    return { tipo: "PRODUCTO", producto, servicio: null, cantidad: i.cantidad, subtotal: producto.precio * i.cantidad };
   });
 
   return {
@@ -94,7 +88,6 @@ export async function agregarItem(req: Request, res: Response<CarritoDetalle>) {
     },
   });
   const nuevaCantidad = (existente?.cantidad ?? 0) + cantidad;
-  validarCantidadServicio(producto, nuevaCantidad);
 
   if (nuevaCantidad > producto.stock) {
     throw new AppError(
@@ -128,7 +121,6 @@ export async function modificarCantidad(
   const { cantidad } = modificarCantidadSchema.parse(req.body);
   const carrito = await obtenerOCrearCarrito(idUsuarioDe(req));
   const producto = await buscarProducto(idProducto);
-  validarCantidadServicio(producto, cantidad);
 
   if (cantidad > producto.stock) {
     throw new AppError(
@@ -155,6 +147,19 @@ export async function quitarItem(req: Request, res: Response<CarritoDetalle>) {
     where: { idCarrito: carrito.idCarrito, idProducto },
   });
   if (count === 0) throw new AppError(404, "El producto no esta en el carrito");
+
+  res.json(await detalleCarrito(carrito.idCarrito));
+}
+
+// DELETE /api/carrito/servicios/:idServicio  (quita un servicio del armador)
+export async function quitarServicio(req: Request, res: Response<CarritoDetalle>) {
+  const { idServicio } = idServicioParamSchema.parse(req.params);
+  const carrito = await obtenerOCrearCarrito(idUsuarioDe(req));
+
+  const { count } = await prisma.itemCarrito.deleteMany({
+    where: { idCarrito: carrito.idCarrito, idServicio },
+  });
+  if (count === 0) throw new AppError(404, "El servicio no esta en el carrito");
 
   res.json(await detalleCarrito(carrito.idCarrito));
 }

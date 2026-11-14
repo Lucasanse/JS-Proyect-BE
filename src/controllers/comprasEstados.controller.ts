@@ -33,6 +33,7 @@ export const obtenerHistorialCompras = async (req: Request, res: Response) => {
         detalles: {
           include: {
             producto: true,
+            servicio: true, // armado de PC, instalacion de Windows...
           },
         },
       },
@@ -50,7 +51,8 @@ export const obtenerHistorialCompras = async (req: Request, res: Response) => {
           detalle.idProducto ??
           detalle.producto?.idProducto ??
           detalle.producto?.idProducto,
-        nombre: detalle.producto?.nombre ?? "Producto sin nombre",
+        nombre: detalle.producto?.nombre ?? detalle.servicio?.nombre ?? "Producto sin nombre",
+        esServicio: detalle.idServicio !== null,
         cantidad: Number(detalle.cantidad),
         precioUnitario: Number(
           detalle.precioUnitario ?? detalle.producto?.precio ?? 0,

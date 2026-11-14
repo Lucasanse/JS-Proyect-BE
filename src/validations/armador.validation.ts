@@ -29,9 +29,22 @@ export const compatiblesSchema = z.object({
   tipo: z.enum([...TIPOS_ARMADOR, PASO_MONITOR, PASO_PERIFERICOS]),
 });
 
-// POST /api/armador/validar, /fuente-sugerida y /carrito
+// POST /api/armador/validar y /fuente-sugerida
 export const seleccionBodySchema = z.object({
   seleccion: seleccionSchema,
+});
+
+// Ids de servicios del armador (armado de PC, instalacion de Windows...), sin repetir
+export const serviciosSchema = z
+  .array(z.coerce.number().int().min(1))
+  .max(20)
+  .refine((s) => new Set(s).size === s.length, { message: "Hay servicios repetidos" })
+  .default([]);
+
+// POST /api/armador/carrito  { seleccion, servicios }
+export const agregarArmadoSchema = z.object({
+  seleccion: seleccionSchema,
+  servicios: serviciosSchema,
 });
 
 // POST /api/armador/presets

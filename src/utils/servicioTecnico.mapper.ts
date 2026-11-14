@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { aceptaRespuestas, transicionesDesde, type EstadoSolicitud } from "./servicioTecnico.estados";
 import type { Software, TipoEquipo, TipoServicio } from "./servicioTecnico.catalogo";
 import type { EventoHistorial, SolicitudDetalle, SolicitudResumen } from "./servicioTecnico.types";
+import type { PrecioSolicitud } from "./servicios";
 
 const selectCliente = { id: true, nombreCompleto: true, correo: true, telefono: true } satisfies Prisma.UsuarioSelect;
 const selectAutor = { nombreCompleto: true, rol: true } satisfies Prisma.UsuarioSelect;
@@ -32,6 +33,9 @@ export function mapearResumenSolicitud(s: SolicitudConResumen): SolicitudResumen
     conPastaTermica: s.conPastaTermica,
     conSSD: s.conSSD,
     descripcion: s.descripcion,
+    precios: s.precios as unknown as PrecioSolicitud[],
+    precioEstimado: s.precioEstimado.toNumber(),
+    aPresupuestar: (s.precios as unknown as PrecioSolicitud[]).some((p) => p.precio === null),
     estado: s.estado as EstadoSolicitud,
     fecha: s.fecha,
     actualizadoEn: s.actualizadoEn,

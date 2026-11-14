@@ -28,7 +28,6 @@ const CATEGORIAS = [
   "Sillas Gamer",
   "Insumos",
   "Random",
-  "Servicios",
 ] as const;
 type NombreCategoria = (typeof CATEGORIAS)[number];
 
@@ -1328,32 +1327,6 @@ const otrosProductos = [
     descripcion: "Memoria USB 3.2 de 64GB.",
     imagenUrl: "https://m.media-amazon.com/images/I/61abRJNk3cL._AC_.jpg",
   },
-  // Servicios: se ofrecen en el armador de PC, no en el catalogo. No son fisicos, por eso
-  // tienen stock alto (el carrito y el checkout igual lo controlan).
-  {
-    categoria: "Servicios",
-    nombre: "Armado de PC (No incluye instalación de sistema operativo)",
-    marca: "Servicio",
-    precio: 3050,
-    stock: 999,
-    descripcion: "Armamos tu PC con los componentes elegidos. No incluye la instalación del sistema operativo.",
-  },
-  {
-    categoria: "Servicios",
-    nombre: "Instalación de Windows",
-    marca: "Servicio",
-    precio: 4500,
-    stock: 999,
-    descripcion: "Instalamos Windows en tu PC armada, con los drivers actualizados. No incluye la licencia.",
-  },
-  {
-    categoria: "Servicios",
-    nombre: "Instalación de paquete Office",
-    marca: "Servicio",
-    precio: 2500,
-    stock: 999,
-    descripcion: "Instalamos el paquete Office en tu PC armada. No incluye la licencia.",
-  },
 ] as const satisfies readonly ProductoSeed[];
 
 type NombreProducto =
@@ -1551,20 +1524,66 @@ const traduccionesEn: Partial<
     nombre: '24" 144Hz Gaming Monitor',
     descripcion: "24-inch Full HD monitor at 144Hz.",
   },
-  // Servicios
-  "Armado de PC (No incluye instalación de sistema operativo)": {
-    nombre: "PC assembly (operating system installation not included)",
-    descripcion: "We assemble your PC with the chosen parts. Operating system installation is not included.",
-  },
-  "Instalación de Windows": {
-    nombre: "Windows installation",
-    descripcion: "We install Windows on your assembled PC, with up-to-date drivers. License not included.",
-  },
-  "Instalación de paquete Office": {
-    nombre: "Office suite installation",
-    descripcion: "We install the Office suite on your assembled PC. License not included.",
-  },
 };
+// Servicios del local (tabla Servicio). Precios de ejemplo: el admin los cambia en /admin/servicios.
+// ARMADOR: se suman al armado de PC y van al carrito. TIPO/EXTRA/SOFTWARE: servicio tecnico (se abonan en el local).
+// precio null = a presupuestar (REPARACION y OTRO).
+const servicios: {
+  codigo: string;
+  grupo: "ARMADOR" | "TIPO" | "EXTRA" | "SOFTWARE";
+  nombre: string;
+  descripcion?: string;
+  precio: number | null;
+  en?: { nombre: string; descripcion: string };
+}[] = [
+  {
+    codigo: "ARMADO_PC",
+    grupo: "ARMADOR",
+    nombre: "Armado de PC (No incluye instalación de sistema operativo)",
+    descripcion: "Armamos tu PC con los componentes elegidos. No incluye la instalación del sistema operativo.",
+    precio: 3050,
+    en: {
+      nombre: "PC assembly (operating system installation not included)",
+      descripcion: "We assemble your PC with the chosen parts. Operating system installation is not included.",
+    },
+  },
+  {
+    codigo: "INSTALACION_WINDOWS",
+    grupo: "ARMADOR",
+    nombre: "Instalación de Windows",
+    descripcion: "Instalamos Windows en tu PC armada, con los drivers actualizados. No incluye la licencia.",
+    precio: 4500,
+    en: {
+      nombre: "Windows installation",
+      descripcion: "We install Windows on your assembled PC, with up-to-date drivers. License not included.",
+    },
+  },
+  {
+    codigo: "INSTALACION_OFFICE",
+    grupo: "ARMADOR",
+    nombre: "Instalación de paquete Office",
+    descripcion: "Instalamos el paquete Office en tu PC armada. No incluye la licencia.",
+    precio: 2500,
+    en: {
+      nombre: "Office suite installation",
+      descripcion: "We install the Office suite on your assembled PC. License not included.",
+    },
+  },
+  { codigo: "REPARACION", grupo: "TIPO", nombre: "Reparación", precio: null },
+  { codigo: "LIMPIEZA", grupo: "TIPO", nombre: "Limpieza", precio: 15000 },
+  { codigo: "FORMATEO", grupo: "TIPO", nombre: "Formateo", precio: 20000 },
+  { codigo: "OPTIMIZACION", grupo: "TIPO", nombre: "Optimización", precio: 18000 },
+  { codigo: "OTRO", grupo: "TIPO", nombre: "Otro", precio: null },
+  { codigo: "EXTRA_PASTA_TERMICA", grupo: "EXTRA", nombre: "Cambio de pasta térmica", precio: 10000 },
+  { codigo: "EXTRA_BACKUP", grupo: "EXTRA", nombre: "Backup de archivos", precio: 8000 },
+  { codigo: "EXTRA_SSD", grupo: "EXTRA", nombre: "Cambio de disco por SSD (mano de obra)", precio: 15000 },
+  { codigo: "SOFTWARE_WIN10", grupo: "SOFTWARE", nombre: "Windows 10", precio: 10000 },
+  { codigo: "SOFTWARE_WIN11", grupo: "SOFTWARE", nombre: "Windows 11", precio: 10000 },
+  { codigo: "SOFTWARE_OFFICE", grupo: "SOFTWARE", nombre: "Office", precio: 8000 },
+  { codigo: "SOFTWARE_WINRAR", grupo: "SOFTWARE", nombre: "WinRAR", precio: 2000 },
+  { codigo: "SOFTWARE_VLC", grupo: "SOFTWARE", nombre: "VLC", precio: 2000 },
+];
+
 const tiposNotificacion = [
   {
     codigo: "VENTA_CONFIRMADA",
@@ -1859,6 +1878,30 @@ async function main() {
   }
 
   console.log(`Traducciones (en) sincronizadas: ${traduccionesCargadas}.`);
+
+  // SERVICIOS: solo se crean los que faltan (no pisa precios ni activo cambiados por el admin)
+  let serviciosCreados = 0;
+  for (const [orden, sv] of servicios.entries()) {
+    const existente = await prisma.servicio.findUnique({ where: { codigo: sv.codigo } });
+    if (existente) continue;
+    await prisma.servicio.create({
+      data: {
+        codigo: sv.codigo,
+        grupo: sv.grupo,
+        nombre: sv.nombre,
+        descripcion: sv.descripcion ?? "",
+        precio: sv.precio,
+        orden,
+        ...(sv.en && {
+          traducciones: {
+            create: { idIdioma: idsIdioma.en, nombreTraducido: sv.en.nombre, descripcionTraducida: sv.en.descripcion },
+          },
+        }),
+      },
+    });
+    serviciosCreados++;
+  }
+  console.log(`Servicios nuevos creados: ${serviciosCreados}.`);
   console.log("Seed finalizado correctamente.");
 }
 

@@ -1,3 +1,5 @@
+import type { ServicioResumen } from "./servicios";
+
 export interface Paginacion {
   page: number;
   limit: number;
@@ -102,11 +104,11 @@ export interface TipoComponenteAdmin {
 }
 
 // GET /api/carrito
-export interface ItemCarritoDetalle {
-  producto: ProductoResumen;
-  cantidad: number;
-  subtotal: number;
-}
+// Un item del carrito es un producto o un servicio del armador (armado de PC, instalacion de Windows...).
+// Los servicios van una sola vez y no tienen stock.
+export type ItemCarritoDetalle =
+  | { tipo: "PRODUCTO"; producto: ProductoResumen; servicio: null; cantidad: number; subtotal: number }
+  | { tipo: "SERVICIO"; producto: null; servicio: ServicioResumen; cantidad: number; subtotal: number };
 
 export interface CarritoDetalle {
   items: ItemCarritoDetalle[];

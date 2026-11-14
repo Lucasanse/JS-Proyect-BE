@@ -32,9 +32,22 @@ export const nombreArchivo = (doc: Pick<Documento, "tipo" | "numero">) =>
 
 const redondear = (valor: number) => Math.round(valor * 100) / 100;
 
-export function armarItem(idProducto: number, nombre: string, cantidad: number, precio: Prisma.Decimal | number): ItemDocumento {
+// ids: el del producto o el del servicio (uno de los dos)
+export function armarItem(
+  ids: { idProducto?: number | null; idServicio?: number | null },
+  nombre: string,
+  cantidad: number,
+  precio: Prisma.Decimal | number,
+): ItemDocumento {
   const precioUnitario = Number(precio);
-  return { idProducto, nombre, cantidad, precioUnitario, subtotal: redondear(precioUnitario * cantidad) };
+  return {
+    idProducto: ids.idProducto ?? null,
+    idServicio: ids.idServicio ?? null,
+    nombre,
+    cantidad,
+    precioUnitario,
+    subtotal: redondear(precioUnitario * cantidad),
+  };
 }
 
 export async function clienteDe(idUsuario: number): Promise<ClienteDocumento> {
@@ -142,7 +155,12 @@ export async function emitirFactura(idVenta: number) {
 
   const venta = await prisma.venta.findUnique({
     where: { idVenta },
-    include: { detalles: { include: { producto: { select: { nombre: true } } }, orderBy: { idDetalleVenta: "asc" } } },
+    include: {
+      detalles: {
+        include: { producto: { select: { nombre: true } }, servicio: { select: { nombre: true } } },
+        orderBy: { idDetalleVenta: "asc" },
+      },
+    },
   });
   if (!venta) throw new AppError(404, "Pedido no encontrado");
   if (!pagoAcreditado(venta)) {
@@ -155,7 +173,9 @@ export async function emitirFactura(idVenta: number) {
       idUsuario: venta.idUsuario,
       idVenta,
       origen: "VENTA",
-      items: venta.detalles.map((d) => armarItem(d.idProducto, d.producto.nombre, d.cantidad, d.precioUnitario)),
+      items: venta.detalles.map((d) =>
+        armarItem(d, d.producto?.nombre ?? d.servicio?.nombre ?? "", d.cantidad, d.precioUnitario),
+      ),
       cliente: await clienteDe(venta.idUsuario),
       total: Number(venta.total),
     });
