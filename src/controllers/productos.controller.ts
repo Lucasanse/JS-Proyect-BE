@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../utils/prisma";
 import { crearIncludeResumen, mapearResumen } from "../utils/producto.mapper";
 import type { Paginado, ProductoResumen } from "../utils/catalogo.types";
+import { CATEGORIA_SERVICIOS } from "../utils/armador.compatibilidad";
 import {
   listarMarcasQuerySchema,
   listarProductosQuerySchema,
@@ -26,9 +27,10 @@ export async function listarProductos(
   } = listarProductosQuerySchema.parse(req.query);
 
   // Si buscan con ?q=, busca tanto en el nombre original como en la traducción del idioma activo
-  // El catalogo publico solo muestra productos activos
+  // El catalogo publico solo muestra productos activos. Los servicios (armado de PC...) se eligen en el armador.
   const where: Prisma.ProductoWhereInput = {
     activo: true,
+    categoria: { nombre: { not: CATEGORIA_SERVICIOS } },
     OR: q
       ? [
           { nombre: { contains: q, mode: "insensitive" } },
@@ -78,7 +80,9 @@ export async function listarMarcas(req: Request, res: Response<string[]>) {
 
   // Solo marcas con algun producto activo (de la categoria, si viene)
   const marcas = await prisma.marca.findMany({
-    where: { productos: { some: { idCategoria: categoria, activo: true } } },
+    where: {
+      productos: { some: { idCategoria: categoria, activo: true, categoria: { nombre: { not: CATEGORIA_SERVICIOS } } } },
+    },
     select: { nombre: true },
     orderBy: { nombre: "asc" },
   });
