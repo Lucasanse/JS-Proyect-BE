@@ -8,7 +8,8 @@ export type OrigenDocumento = "CARRITO" | "PRESET" | "ARMADO" | "VENTA";
 
 // Copia de cada producto tal como estaba al emitir el documento (columna "items")
 export interface ItemDocumento {
-  idProducto: number;
+  idProducto: number | null; // producto vendido, o null si es un servicio
+  idServicio?: number | null; // servicio del armador (armado de PC, instalacion de Windows...)
   nombre: string;
   cantidad: number;
   precioUnitario: number;

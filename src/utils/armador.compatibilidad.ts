@@ -21,12 +21,10 @@ export const CATEGORIAS_PERIFERICOS = ["Teclados", "Mouse", "Auriculares", "Peri
 export const PASO_MONITOR = "Monitor";
 export const CATEGORIA_MONITORES = "Monitores";
 
-// Servicios que se suman al armado (armado de la PC, instalacion de Windows...). Son productos
-// de esta categoria: se cobran como cualquier otro, pero no aparecen en el catalogo.
-export const PASO_SERVICIOS = "Servicios";
-export const CATEGORIA_SERVICIOS = "Servicios";
+// Los servicios que se suman al armado (armado de la PC, instalacion de Windows...) no son
+// productos: estan en la tabla Servicio (ver src/utils/servicios.ts).
 
-export type PasoArmador = TipoArmador | typeof PASO_MONITOR | typeof PASO_PERIFERICOS | typeof PASO_SERVICIOS;
+export type PasoArmador = TipoArmador | typeof PASO_MONITOR | typeof PASO_PERIFERICOS;
 
 // En estos pasos se pueden elegir varios productos distintos (ej. un NVMe y un disco rigido),
 // mientras entren en las conexiones del motherboard

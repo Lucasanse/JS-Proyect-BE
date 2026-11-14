@@ -11,6 +11,7 @@ import {
   resumenDocumento,
 } from "../utils/documentos";
 import type { DocumentoResumen, ItemDocumento, OrigenDocumento } from "../utils/documentos.types";
+import { cargarServiciosArmador } from "../utils/servicios";
 import { generarPresupuestoSchema, idDocumentoParamSchema } from "../validations/documentos.validation";
 
 // Todas las rutas pasan por requireAuth. Cada usuario solo ve y descarga sus propios documentos:
@@ -25,11 +26,14 @@ async function itemsPresupuesto(
   if (body.origen === "carrito") {
     const carrito = await prisma.carrito.findUnique({
       where: { idUsuario },
-      include: { items: { include: { producto: true }, orderBy: { idItemCarrito: "asc" } } },
+      include: { items: { include: { producto: true, servicio: true }, orderBy: { idItemCarrito: "asc" } } },
     });
-    const items = (carrito?.items ?? [])
-      .filter((i) => i.producto.activo)
-      .map((i) => armarItem(i.idProducto, i.producto.nombre, i.cantidad, i.producto.precio));
+    // Productos y servicios del armador; los dados de baja quedan afuera
+    const items = (carrito?.items ?? []).flatMap((i) => {
+      if (i.producto) return i.producto.activo ? [armarItem(i, i.producto.nombre, i.cantidad, i.producto.precio)] : [];
+      if (i.servicio?.activo && i.servicio.precio) return [armarItem(i, i.servicio.nombre, i.cantidad, i.servicio.precio)];
+      return [];
+    });
     if (items.length === 0) throw new AppError(400, "El carrito está vacío");
     return { origen: "CARRITO", items };
   }
@@ -43,7 +47,7 @@ async function itemsPresupuesto(
     // Los productos dados de baja ya no se venden: quedan fuera del presupuesto
     const items = preset.componentes
       .filter((c) => c.producto.activo)
-      .map((c) => armarItem(c.idProducto, c.producto.nombre, c.cantidad, c.producto.precio));
+      .map((c) => armarItem(c, c.producto.nombre, c.cantidad, c.producto.precio));
     if (items.length === 0) throw new AppError(400, "El armado no tiene productos disponibles");
     return { origen: "PRESET", items };
   }
@@ -54,8 +58,11 @@ async function itemsPresupuesto(
   const porId = new Map(productos.map((p) => [p.idProducto, p]));
   const items = body.seleccion.map(({ idProducto, cantidad }) => {
     const p = porId.get(idProducto)!;
-    return armarItem(idProducto, p.nombre, cantidad, p.precio);
+    return armarItem({ idProducto }, p.nombre, cantidad, p.precio);
   });
+  // Servicios elegidos (armado de PC, instalacion de Windows...), en espanol como el resto del PDF
+  const servicios = await cargarServiciosArmador(body.servicios);
+  items.push(...servicios.map((s) => armarItem({ idServicio: s.id }, s.nombre, 1, s.precio)));
   return { origen: "ARMADO", items };
 }
 

@@ -4,7 +4,6 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../utils/prisma";
 import { AppError } from "../utils/AppError";
 import type { Paginado, ProductoAdmin } from "../utils/catalogo.types";
-import { CATEGORIA_SERVICIOS } from "../utils/armador.compatibilidad";
 import { borrarImagenLocal } from "../middlewares/subirImagen";
 import {
   estadoSchema,
@@ -181,8 +180,6 @@ export async function listarProductosAdmin(req: Request, res: Response<Paginado<
         ]
       : undefined,
     idCategoria: categoria,
-    // Los servicios (armado de PC, instalacion de Windows...) tienen su propio panel
-    categoria: { nombre: { not: CATEGORIA_SERVICIOS } },
     activo: estado === "todos" ? undefined : estado === "activos",
   };
 

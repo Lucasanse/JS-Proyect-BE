@@ -106,8 +106,9 @@ model Idioma {
   nombre   String  @map("nombre")
   activo   Boolean @default(true) @map("activo")
 
-  usuarios     Usuario[]
-  traducciones TraduccionProducto[]
+  usuarios              Usuario[]
+  traducciones          TraduccionProducto[]
+  traduccionesServicios TraduccionServicio[]
 
   @@map("idiomas")
 }
@@ -248,16 +249,20 @@ model Carrito {
   @@map("carritos")
 }
 
+// Un producto o un servicio del armador (exactamente uno: lo controla un CHECK en la migracion)
 model ItemCarrito {
-  idItemCarrito Int @id @default(autoincrement()) @map("id_item_carrito")
-  idCarrito     Int @map("id_carrito")
-  idProducto    Int @map("id_producto")
-  cantidad      Int @map("cantidad")
+  idItemCarrito Int  @id @default(autoincrement()) @map("id_item_carrito")
+  idCarrito     Int  @map("id_carrito")
+  idProducto    Int? @map("id_producto")
+  idServicio    Int? @map("id_servicio")
+  cantidad      Int  @map("cantidad")
 
-  carrito  Carrito  @relation(fields: [idCarrito], references: [idCarrito], onDelete: Cascade)
-  producto Producto @relation(fields: [idProducto], references: [idProducto])
+  carrito  Carrito   @relation(fields: [idCarrito], references: [idCarrito], onDelete: Cascade)
+  producto Producto? @relation(fields: [idProducto], references: [idProducto], onDelete: Restrict)
+  servicio Servicio? @relation(fields: [idServicio], references: [idServicio], onDelete: Restrict)
 
   @@unique([idCarrito, idProducto])
+  @@unique([idCarrito, idServicio])
   @@map("items_carrito")
 }
 
@@ -293,15 +298,18 @@ model Cotizacion {
   @@map("cotizaciones")
 }
 
+// Un producto o un servicio del armador (exactamente uno: lo controla un CHECK en la migracion)
 model DetalleVenta {
   idDetalleVenta Int     @id @default(autoincrement()) @map("id_detalle_venta")
   idVenta        Int     @map("id_venta")
-  idProducto     Int     @map("id_producto")
+  idProducto     Int?    @map("id_producto")
+  idServicio     Int?    @map("id_servicio")
   cantidad       Int     @map("cantidad")
   precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2)
 
-  venta    Venta    @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
-  producto Producto @relation(fields: [idProducto], references: [idProducto])
+  venta    Venta     @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
+  producto Producto? @relation(fields: [idProducto], references: [idProducto], onDelete: Restrict)
+  servicio Servicio? @relation(fields: [idServicio], references: [idServicio], onDelete: Restrict)
 
   @@map("detalles_venta")
 }
@@ -329,6 +337,10 @@ model SolicitudServicio {
   conBackup       Boolean  @default(false) @map("con_backup") // solo con FORMATEO: backup antes de formatear
   conPastaTermica Boolean  @default(false) @map("con_pasta_termica") // solo con LIMPIEZA: cambio de pasta termica
   conSSD          Boolean  @default(false) @map("con_ssd") // solo con OPTIMIZACION: cambiar el disco duro por un SSD
+  // Precios de la tabla Servicio al crear la solicitud: [{ codigo, precio }] (precio null = a presupuestar).
+  // Es una estimacion: se abona en el local cuando el cliente trae el equipo y se confirma el servicio.
+  precios         Json     @default("[]") @map("precios")
+  precioEstimado  Decimal  @default(0) @map("precio_estimado") @db.Decimal(10, 2) // suma de los precios fijos
   // Que le sucede al equipo / comentarios. Obligatoria con REPARACION u OTRO.
   descripcion     String?  @map("descripcion")
   diagnosticoIA   String?  @map("diagnostico_ia")
@@ -463,6 +475,43 @@ model ComponentePreset {
 
   @@id([idPreset, idProducto])
   @@map("componentes_preset")
+}
+
+// Servicios del local con su precio (en pesos), editables desde /admin/servicios.
+// No se crean desde la app: vienen de la migracion/seed; el admin solo cambia precio y activo.
+//  - grupo ARMADOR: armado de PC, instalacion de Windows... Se suman al armado y van al carrito.
+//  - grupo TIPO / EXTRA / SOFTWARE: servicio tecnico (src/utils/servicioTecnico.catalogo.ts).
+//    El codigo es el tipo (LIMPIEZA), el extra (EXTRA_BACKUP) o el programa (SOFTWARE_WIN10).
+//    Se abonan en el local; el precio es una estimacion que se informa al pedir el servicio.
+model Servicio {
+  idServicio  Int      @id @default(autoincrement()) @map("id_servicio")
+  codigo      String   @unique @map("codigo")
+  grupo       String   @map("grupo")
+  nombre      String   @map("nombre") // en espanol (el FE traduce los de servicio tecnico por codigo)
+  descripcion String   @default("") @map("descripcion")
+  precio      Decimal? @map("precio") @db.Decimal(10, 2) // null = a presupuestar (REPARACION, OTRO)
+  activo      Boolean  @default(true) @map("activo") // inactivo = no se ofrece
+  orden       Int      @default(0) @map("orden")
+
+  traducciones  TraduccionServicio[]
+  itemsCarrito  ItemCarrito[]
+  detallesVenta DetalleVenta[]
+
+  @@index([grupo])
+  @@map("servicios")
+}
+
+model TraduccionServicio {
+  idServicio           Int    @map("id_servicio")
+  idIdioma             Int    @map("id_idioma")
+  nombreTraducido      String @map("nombre_traducido")
+  descripcionTraducida String @map("descripcion_traducida")
+
+  servicio Servicio @relation(fields: [idServicio], references: [idServicio], onDelete: Cascade)
+  idioma   Idioma   @relation(fields: [idIdioma], references: [idIdioma])
+
+  @@id([idServicio, idIdioma])
+  @@map("traducciones_servicio")
 }
 
 model Favorito {

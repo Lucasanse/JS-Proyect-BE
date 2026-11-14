@@ -69,13 +69,17 @@ export async function crearOrdenCarrito(req: Request, res: Response) {
     const Idcarrito = await obtenerOCrearCarrito(idUsuario);
     const carrito = await detalleCarrito(Idcarrito.idCarrito);
 
-    const productos = carrito.items.map((item) => ({
-      id: item.producto.id.toString(),
-      title: item.producto.nombre,
-      unit_price: item.producto.precio,
-      quantity: item.cantidad,
-      currency_id: "ARS",
-    }));
+    // Productos y servicios del armador (los servicios llevan el prefijo S para no confundir ids)
+    const productos = carrito.items.map((item) => {
+      const datos = item.tipo === "SERVICIO" ? item.servicio : item.producto;
+      return {
+        id: item.tipo === "SERVICIO" ? `S${datos.id}` : datos.id.toString(),
+        title: datos.nombre,
+        unit_price: datos.precio,
+        quantity: item.cantidad,
+        currency_id: "ARS",
+      };
+    });
 
     const preference = new Preference(cliente);
     const respuesta = await preference.create({

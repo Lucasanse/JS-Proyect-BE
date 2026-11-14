@@ -93,6 +93,8 @@ export const obtenerVentaPorIdAdmin = async (req: Request, res: Response) => {
                 imagenUrl: true,
               },
             },
+            // Armado de PC, instalacion de Windows... (sin producto)
+            servicio: { select: { idServicio: true, nombre: true, precio: true } },
           },
         },
       },
@@ -174,6 +176,8 @@ export const listarVentasAdmin = async (req: Request, res: Response) => {
                   imagenUrl: true,
                 },
               },
+              // Armado de PC, instalacion de Windows... (sin producto)
+              servicio: { select: { idServicio: true, nombre: true, precio: true } },
             },
           },
         },
