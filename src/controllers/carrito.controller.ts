@@ -35,6 +35,9 @@ async function buscarProducto(idProducto: number) {
   return producto;
 }
 
+// Se redondea a 2 decimales para evitar errores de coma flotante
+const redondear = (n: number) => Math.round(n * 100) / 100;
+
 // Arma la respuesta con el detalle de cada item (producto o servicio) y el total.
 export async function detalleCarrito(
   idCarrito: number,
@@ -48,18 +51,35 @@ export async function detalleCarrito(
   const detalle = items.map((i): ItemCarritoDetalle => {
     if (i.servicio) {
       const servicio = mapearServicioResumen(i.servicio);
-      return { tipo: "SERVICIO", producto: null, servicio, cantidad: i.cantidad, subtotal: servicio.precio * i.cantidad };
+      return {
+        tipo: "SERVICIO",
+        producto: null,
+        servicio,
+        cantidad: i.cantidad,
+        subtotal: redondear(servicio.precio * i.cantidad),
+        subtotalFinal: redondear(servicio.precioFinal * i.cantidad),
+      };
     }
     const producto = mapearResumen(i.producto!);
-    return { tipo: "PRODUCTO", producto, servicio: null, cantidad: i.cantidad, subtotal: producto.precio * i.cantidad };
+    return {
+      tipo: "PRODUCTO",
+      producto,
+      servicio: null,
+      cantidad: i.cantidad,
+      subtotal: redondear(producto.precio * i.cantidad),
+      subtotalFinal: redondear(producto.precioFinal * i.cantidad),
+    };
   });
 
+  // El total es la suma de lo que se cobra (con IVA); el IVA, la diferencia con el subtotal sin IVA
+  const subtotal = redondear(detalle.reduce((acc, i) => acc + i.subtotal, 0));
+  const total = redondear(detalle.reduce((acc, i) => acc + i.subtotalFinal, 0));
   return {
     items: detalle,
     cantidadTotal: detalle.reduce((acc, i) => acc + i.cantidad, 0),
-    // Se redondea a 2 decimales para evitar errores de coma flotante
-    total:
-      Math.round(detalle.reduce((acc, i) => acc + i.subtotal, 0) * 100) / 100,
+    subtotal,
+    iva: redondear(total - subtotal),
+    total,
   };
 }
 

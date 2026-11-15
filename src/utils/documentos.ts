@@ -4,6 +4,8 @@ import { Prisma, type Documento } from "@prisma/client";
 import { prisma } from "./prisma";
 import { AppError } from "./AppError";
 import { COMERCIO } from "./pdf/comercio";
+import { CARPETA_DOCUMENTOS } from "../middlewares/subirImagen";
+import { ALICUOTA_GENERAL } from "./iva";
 import { renderizarDocumento } from "./pdf/plantillaDocumento";
 import { crearNotificacionDocumento } from "./notificaciones";
 import type {
@@ -15,8 +17,7 @@ import type {
 } from "./documentos.types";
 
 // Presupuestos y facturas en PDF: numeracion, guardado del archivo y notificacion.
-// Los PDF quedan en la carpeta "documentos" del BE (no es publica: se descargan con sesion).
-export const CARPETA_DOCUMENTOS = path.resolve(process.cwd(), "documentos");
+// Los PDF quedan en uploads/documentos (no es publica: se descargan con sesion).
 const SUBCARPETAS: Record<TipoDocumento, string> = { PRESUPUESTO: "presupuestos", FACTURA: "facturas" };
 
 // Una venta tiene el pago acreditado si MP la aprobo (las ventas se crean recien ahi) y no se cancelo
@@ -32,17 +33,19 @@ export const nombreArchivo = (doc: Pick<Documento, "tipo" | "numero">) =>
 
 const redondear = (valor: number) => Math.round(valor * 100) / 100;
 
-// ids: el del producto o el del servicio (uno de los dos)
+// ids: el del producto o el del servicio (uno de los dos). precio: con IVA (Factura B)
 export function armarItem(
   ids: { idProducto?: number | null; idServicio?: number | null },
   nombre: string,
   cantidad: number,
   precio: Prisma.Decimal | number,
+  alicuotaIva: Prisma.Decimal | number = ALICUOTA_GENERAL,
 ): ItemDocumento {
   const precioUnitario = Number(precio);
   return {
     idProducto: ids.idProducto ?? null,
     idServicio: ids.idServicio ?? null,
+    alicuotaIva: Number(alicuotaIva),
     nombre,
     cantidad,
     precioUnitario,
@@ -132,14 +135,11 @@ async function guardarPdf(doc: Documento) {
   return pdf;
 }
 
-// Contenido del PDF. Si el archivo se perdio (o fallo al guardarlo), se vuelve a generar igual.
+// Contenido del PDF. Se vuelve a dibujar en cada descarga con los datos guardados del documento
+// (items, cliente, total y fecha no cambian), asi siempre sale con el diseño y los datos del comercio
+// vigentes aunque se haya emitido antes de un cambio. El archivo en disco se actualiza de paso.
 export async function leerPdf(doc: Documento) {
-  try {
-    return await fs.readFile(path.join(CARPETA_DOCUMENTOS, doc.rutaArchivo));
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    return guardarPdf(doc);
-  }
+  return guardarPdf(doc);
 }
 
 export async function emitirPresupuesto(idUsuario: number, origen: OrigenDocumento, items: ItemDocumento[]) {
@@ -174,7 +174,7 @@ export async function emitirFactura(idVenta: number) {
       idVenta,
       origen: "VENTA",
       items: venta.detalles.map((d) =>
-        armarItem(d, d.producto?.nombre ?? d.servicio?.nombre ?? "", d.cantidad, d.precioUnitario),
+        armarItem(d, d.producto?.nombre ?? d.servicio?.nombre ?? "", d.cantidad, d.precioUnitario, d.alicuotaIva),
       ),
       cliente: await clienteDe(venta.idUsuario),
       total: Number(venta.total),

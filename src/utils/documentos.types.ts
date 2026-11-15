@@ -10,9 +10,10 @@ export type OrigenDocumento = "CARRITO" | "PRESET" | "ARMADO" | "VENTA";
 export interface ItemDocumento {
   idProducto: number | null; // producto vendido, o null si es un servicio
   idServicio?: number | null; // servicio del armador (armado de PC, instalacion de Windows...)
+  alicuotaIva?: number; // IVA incluido en precioUnitario (los documentos viejos no lo tienen: 21)
   nombre: string;
   cantidad: number;
-  precioUnitario: number;
+  precioUnitario: number; // con IVA
   subtotal: number;
 }
 

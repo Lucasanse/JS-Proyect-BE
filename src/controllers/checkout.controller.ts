@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { obtenerOCrearCarrito, detalleCarrito } from "./carrito.controller";
 import { prisma } from "../utils/prisma";
+import { preciosProducto } from "../utils/iva";
 
 // URL publica del BE (ngrok en desarrollo). Cada uno pone la suya en PUBLIC_BACKEND_URL del .env.
 const URL_PUBLICA = (process.env.PUBLIC_BACKEND_URL || "https://agency-amino-angelic.ngrok-free.dev").replace(/\/$/, "");
@@ -29,7 +30,7 @@ export async function crearOrdenPorUnidad(req: Request, res: Response) {
         id: producto.idProducto.toString(),
         title: producto.nombre,
         quantity: cantidad,
-        unit_price: Number(producto.precio),
+        unit_price: preciosProducto(producto).final, // con IVA
         currency_id: "ARS",
       },
     ];
@@ -75,7 +76,7 @@ export async function crearOrdenCarrito(req: Request, res: Response) {
       return {
         id: item.tipo === "SERVICIO" ? `S${datos.id}` : datos.id.toString(),
         title: datos.nombre,
-        unit_price: datos.precio,
+        unit_price: datos.precioFinal, // con IVA
         quantity: item.cantidad,
         currency_id: "ARS",
       };

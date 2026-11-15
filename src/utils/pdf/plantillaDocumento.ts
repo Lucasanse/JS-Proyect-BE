@@ -2,10 +2,14 @@ import fs from "node:fs";
 import PDFDocument from "pdfkit";
 import { format } from "date-fns";
 import { COMERCIO } from "./comercio";
+import { ALICUOTA_GENERAL, ivaContenido } from "../iva";
 import type { DatosPdf } from "../documentos.types";
 
-// Plantilla unica para presupuestos y facturas: membrete con logo y datos del comercio,
-// datos del cliente, detalle de productos, total, leyenda y pie de pagina en cada hoja.
+// Plantilla unica para presupuestos y facturas, con el formato de una Factura B electronica:
+// encabezado partido con la letra del comprobante en el medio, datos fiscales del comercio
+// (CUIT, Ingresos Brutos, inicio de actividades), datos del receptor con su condicion frente al IVA,
+// detalle con alicuota de IVA, IVA contenido (Ley 27.743), total, leyenda y pie en cada hoja.
+// Todavia no se pide el CAE a ARCA: por eso la factura aclara que no es valida como factura fiscal.
 // Pensada para imprimir en blanco y negro: sin fondos de color, todo con bordes y lineas.
 // Los datos y colores del comercio se cambian en comercio.ts (misma carpeta).
 
@@ -21,22 +25,45 @@ const { colores: C } = COMERCIO;
 
 // Columnas de la tabla de productos (suman el ancho util de una hoja A4: 515)
 const COLUMNAS = [
-  { titulo: "Producto", ancho: 275, alinear: "left" },
-  { titulo: "Cant.", ancho: 50, alinear: "center" },
-  { titulo: "Precio unit.", ancho: 95, alinear: "right" },
-  { titulo: "Subtotal", ancho: 95, alinear: "right" },
+  { titulo: "Cant.", ancho: 40, alinear: "center" },
+  { titulo: "Descripción", ancho: 212, alinear: "left" },
+  { titulo: "Precio unitario", ancho: 95, alinear: "right" },
+  { titulo: "Alícuota IVA", ancho: 78, alinear: "center" },
+  { titulo: "Importe", ancho: 90, alinear: "right" },
 ] as const;
+const COL_DESCRIPCION = 1;
+const COL_IMPORTE = 4;
 const PADDING = 6;
 const ALTO_FILA_MIN = 22;
 
 const formatoArs = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" });
 // Los espacios especiales de Intl se pasan a espacios comunes para que la fuente estandar los dibuje
 const pesos = (valor: number) => formatoArs.format(valor).replace(/[  ]/g, " ");
-const fecha = (valor: Date) => format(valor, "dd/MM/yyyy");
+const fechaHora = (valor: Date) => format(valor, "dd/MM/yyyy HH:mm");
+const porcentaje = (valor: number) => valor.toFixed(2).replace(".", ",");
+
+// Factura B: los precios ya incluyen IVA. IVA contenido = total - total / (1 + alicuota)
+// Los documentos viejos no guardaban la alicuota de cada item: eran todos al 21%
+const alicuotaDe = (item: { alicuotaIva?: number }) => item.alicuotaIva ?? ALICUOTA_GENERAL;
+
+// IVA contenido de los items, separado por alicuota (de mayor a menor)
+function ivaPorAlicuota(items: DatosPdf["items"]) {
+  const porAlicuota = new Map<number, number>();
+  for (const item of items) {
+    const a = alicuotaDe(item);
+    if (a === 0) continue; // sin IVA (servicios)
+    porAlicuota.set(a, (porAlicuota.get(a) ?? 0) + item.subtotal);
+  }
+  return [...porAlicuota.entries()].sort((x, y) => y[0] - x[0]).map(([a, total]) => [a, ivaContenido(total, a)] as const);
+}
 // "30123456789" -> "30-12345678-9" (si ya viene con guiones, queda igual)
 const cuit = (valor: string) => (/^\d{11}$/.test(valor) ? `${valor.slice(0, 2)}-${valor.slice(2, 10)}-${valor.slice(10)}` : valor);
 
 const TITULOS = { PRESUPUESTO: "Presupuesto", FACTURA: "Factura" } as const;
+// Letra de la factura: B (consumidor final), con su codigo de ARCA (06 = Factura B).
+// El presupuesto no lleva letra: tiene su propio encabezado (encabezadoPresupuesto).
+const LETRA = "B";
+const CODIGO_ARCA = "06";
 
 // Genera el PDF en memoria
 export function renderizarDocumento(datos: DatosPdf): Promise<Buffer> {
@@ -58,10 +85,12 @@ export function renderizarDocumento(datos: DatosPdf): Promise<Buffer> {
   });
 
   const f = registrarFuentes(doc);
-  let y = encabezado(doc, f, datos);
-  y = bloqueCliente(doc, f, datos, y);
+  // El presupuesto tiene un formato propio, mas liviano: no se parece a una factura
+  const esPresupuesto = datos.tipo === "PRESUPUESTO";
+  let y = esPresupuesto ? encabezadoPresupuesto(doc, f, datos) : encabezado(doc, f, datos);
+  y = esPresupuesto ? clientePresupuesto(doc, f, datos, y) : bloqueCliente(doc, f, datos, y);
   y = tablaItems(doc, f, datos, y);
-  y = bloqueTotal(doc, f, datos, y);
+  y = esPresupuesto ? totalPresupuesto(doc, f, datos, y) : bloqueTotal(doc, f, datos, y);
   leyenda(doc, f, datos, y);
   pieDePagina(doc, f);
 
@@ -98,97 +127,189 @@ function asegurarEspacio(doc: Doc, y: number, alto: number) {
   return MARGEN;
 }
 
-// Membrete: logo, datos del comercio y recuadro con tipo, numero y fecha
+// Encabezado de comprobante: un recuadro partido al medio con la letra (B) arriba al centro.
+// Izquierda: logo, nombre y datos del comercio. Derecha: tipo, numero, fecha y datos fiscales.
 function encabezado(doc: Doc, f: Fuentes, datos: DatosPdf) {
   const top = MARGEN;
-  let xTexto = MARGEN;
+  const ancho = anchoUtil(doc);
+  const medio = MARGEN + ancho / 2;
+  const ladoLetra = 46;
+  const pad = 12;
+
+  // ── Izquierda: comercio ──
+  const anchoIzq = ancho / 2 - ladoLetra / 2 - pad * 2;
+  let yIzq = top + pad;
+  let xTexto = MARGEN + pad;
   if (fs.existsSync(COMERCIO.logo)) {
-    doc.image(COMERCIO.logo, MARGEN, top, { fit: [60, 60] });
-    xTexto += 72;
+    doc.image(COMERCIO.logo, xTexto, yIzq, { fit: [48, 48] });
+    doc.font(f.negrita).fontSize(16).fillColor(C.texto).text(COMERCIO.nombre, xTexto + 56, yIzq + 14, {
+      width: anchoIzq - 56,
+    });
+    yIzq += 58;
+  } else {
+    doc.font(f.negrita).fontSize(16).fillColor(C.texto).text(COMERCIO.nombre, xTexto, yIzq, { width: anchoIzq });
+    yIzq += 24;
   }
-
-  const anchoCaja = 180;
-  const xCaja = MARGEN + anchoUtil(doc) - anchoCaja;
-  const anchoDatos = xCaja - xTexto - 12;
-
-  doc.font(f.negrita).fontSize(17).fillColor(C.texto).text(COMERCIO.nombre, xTexto, top, { width: anchoDatos });
-  doc.font(f.normal).fontSize(9).fillColor(C.secundario);
-  const lineas = [
-    COMERCIO.razonSocial,
-    `CUIT ${cuit(COMERCIO.cuit)} - ${COMERCIO.condicionIva}`,
-    COMERCIO.direccion,
-    `Tel. ${COMERCIO.telefono}`,
-    `${COMERCIO.email} - ${COMERCIO.web}`,
-  ];
-  let yDatos = top + 23;
-  for (const texto of lineas) {
-    doc.text(texto, xTexto, yDatos, { width: anchoDatos, lineBreak: false, ellipsis: true });
-    yDatos += 11.5;
+  doc.font(f.negrita).fontSize(9).fillColor(C.texto).text(COMERCIO.razonSocial, xTexto, yIzq, { width: anchoIzq });
+  yIzq += 12;
+  doc.font(f.normal).fontSize(8.5).fillColor(C.secundario);
+  for (const texto of [COMERCIO.direccion, `Tel. ${COMERCIO.telefono}`, COMERCIO.email, COMERCIO.web]) {
+    doc.text(texto, xTexto, yIzq, { width: anchoIzq, lineBreak: false, ellipsis: true });
+    yIzq += 11;
   }
+  doc.font(f.negrita).fontSize(8.5).fillColor(C.texto).text(COMERCIO.condicionIva, xTexto, yIzq + 2, { width: anchoIzq });
+  yIzq += 16;
 
-  // Recuadro con borde (sin relleno) para el tipo de comprobante
-  const detalles: [string, string][] = [
-    ["N°", datos.numero],
-    ["Fecha", fecha(datos.fecha)],
-  ];
-  if (datos.referencia) detalles.push(["Referencia", datos.referencia]);
-
-  const altoTitulo = 28;
-  const altoCaja = altoTitulo + 8 + detalles.length * 13;
-  doc.rect(xCaja, top, anchoCaja, altoCaja).lineWidth(1.5).strokeColor(C.borde).stroke();
+  // ── Derecha: comprobante ──
+  const xDer = medio + ladoLetra / 2 + pad;
+  const anchoDer = MARGEN + ancho - pad - xDer;
+  const [puntoVenta, nroComprobante] = datos.numero.split("-");
+  let yDer = top + pad;
   doc
-    .moveTo(xCaja, top + altoTitulo)
-    .lineTo(xCaja + anchoCaja, top + altoTitulo)
-    .lineWidth(1)
+    .font(f.negrita)
+    .fontSize(18)
+    .fillColor(C.texto)
+    .text(TITULOS[datos.tipo].toUpperCase(), xDer, yDer, { width: anchoDer, characterSpacing: 1 });
+  yDer += 26;
+  const filas: [string, string][] = [
+    ["Punto de venta:", puntoVenta],
+    ["Comp. Nro:", nroComprobante],
+    ["Fecha de emisión:", fechaHora(datos.fecha)],
+    ["CUIT:", cuit(COMERCIO.cuit)],
+    ["Ingresos Brutos:", COMERCIO.ingresosBrutos],
+    ["Inicio de actividades:", COMERCIO.inicioActividades],
+  ];
+  if (datos.referencia) filas.push(["Referencia:", datos.referencia]);
+  for (const [etiqueta, valor] of filas) {
+    doc.font(f.normal).fontSize(8.5).fillColor(C.secundario).text(etiqueta, xDer, yDer, { width: 100 });
+    doc.font(f.negrita).fontSize(8.5).fillColor(C.texto).text(valor, xDer + 100, yDer, { width: anchoDer - 100 });
+    yDer += 12;
+  }
+
+  // ── Recuadro, division y letra ──
+  const alto = Math.max(yIzq, yDer) - top + pad - 4;
+  doc.rect(MARGEN, top, ancho, alto).lineWidth(1.5).strokeColor(C.borde).stroke();
+  doc
+    .moveTo(medio, top + ladoLetra)
+    .lineTo(medio, top + alto)
+    .lineWidth(0.75)
     .strokeColor(C.borde)
     .stroke();
+  const xLetra = medio - ladoLetra / 2;
+  doc.rect(xLetra, top, ladoLetra, ladoLetra).lineWidth(1.5).strokeColor(C.borde).stroke();
+  doc.font(f.negrita).fontSize(26).fillColor(C.texto).text(LETRA, xLetra, top + 6, { width: ladoLetra, align: "center" });
+  // El codigo de ARCA solo en la factura: el presupuesto no es un comprobante fiscal
+  if (datos.tipo === "FACTURA") {
+    doc
+      .font(f.normal)
+      .fontSize(6.5)
+      .fillColor(C.texto)
+      .text(`COD. ${CODIGO_ARCA}`, xLetra, top + ladoLetra - 10, { width: ladoLetra, align: "center" });
+  }
+
+  return top + alto + 10;
+}
+
+// ─── Presupuesto: formato propio, sin datos fiscales ───
+
+// Logo y nombre del comercio; a la derecha "PRESUPUESTO" con numero y fecha. Una linea abajo.
+function encabezadoPresupuesto(doc: Doc, f: Fuentes, datos: DatosPdf) {
+  const top = MARGEN;
+  const ancho = anchoUtil(doc);
+  let x = MARGEN;
+  if (fs.existsSync(COMERCIO.logo)) {
+    doc.image(COMERCIO.logo, x, top, { fit: [44, 44] });
+    x += 54;
+  }
+  doc.font(f.negrita).fontSize(18).fillColor(C.texto).text(COMERCIO.nombre, x, top + 4, { width: ancho / 2 });
+  doc
+    .font(f.normal)
+    .fontSize(8.5)
+    .fillColor(C.secundario)
+    .text(`${COMERCIO.web}  ·  ${COMERCIO.telefono}`, x, top + 27, { width: ancho / 2, lineBreak: false, ellipsis: true });
+
+  const anchoDer = 200;
+  const xDer = MARGEN + ancho - anchoDer;
+  doc
+    .font(f.negrita)
+    .fontSize(20)
+    .fillColor(C.texto)
+    .text("PRESUPUESTO", xDer, top, { width: anchoDer, align: "right", characterSpacing: 2 });
+  doc
+    .font(f.normal)
+    .fontSize(9)
+    .fillColor(C.secundario)
+    .text(`N° ${datos.numero}  ·  ${fechaHora(datos.fecha).slice(0, 10)}`, xDer, top + 27, { width: anchoDer, align: "right" });
+
+  const y = top + 54;
+  linea(doc, y, 2, C.borde);
+  return y + 16;
+}
+
+// Para quien es, en una sola linea
+function clientePresupuesto(doc: Doc, f: Fuentes, datos: DatosPdf, y: number) {
+  const { cliente } = datos;
+  const extra = [cliente.correo, cliente.telefono].filter(Boolean).join("  ·  ");
+  doc.font(f.normal).fontSize(9.5).fillColor(C.secundario).text("Preparado para: ", MARGEN, y, { continued: true });
+  doc.font(f.negrita).fillColor(C.texto).text(cliente.nombre, { continued: !!extra });
+  if (extra) doc.font(f.normal).fillColor(C.secundario).text(`  ·  ${extra}`);
+  return y + 24;
+}
+
+// Como en el carrito: subtotal sin IVA, IVA y total
+function totalPresupuesto(doc: Doc, f: Fuentes, datos: DatosPdf, yInicial: number) {
+  const y = asegurarEspacio(doc, yInicial, 90);
+  const anchoCaja = 240;
+  const x = MARGEN + anchoUtil(doc) - anchoCaja;
+  const iva = Math.round(datos.items.reduce((acc, i) => acc + ivaContenido(i.subtotal, alicuotaDe(i)), 0) * 100) / 100;
+  const neto = Math.round((datos.total - iva) * 100) / 100;
+
+  const fila = (etiqueta: string, valor: string, yFila: number) => {
+    doc.font(f.normal).fontSize(9.5).fillColor(C.secundario).text(etiqueta, x, yFila, { width: anchoCaja - 110 });
+    doc.font(f.negrita).fontSize(9.5).fillColor(C.texto).text(valor, x + anchoCaja - 120, yFila, { width: 120, align: "right" });
+  };
+  fila("Subtotal (sin IVA)", pesos(neto), y);
+  fila("IVA", pesos(iva), y + 15);
+
+  const yCaja = y + 34;
+  const altoCaja = 36;
+  doc.rect(x, yCaja, anchoCaja, altoCaja).lineWidth(2).strokeColor(C.borde).stroke();
+  doc.font(f.negrita).fontSize(10).fillColor(C.texto).text("TOTAL", x + 14, yCaja + 13, { width: 90 });
   doc
     .font(f.negrita)
     .fontSize(15)
     .fillColor(C.texto)
-    .text(TITULOS[datos.tipo].toUpperCase(), xCaja, top + 8, { width: anchoCaja, align: "center", characterSpacing: 1.5 });
-
-  let yDetalle = top + altoTitulo + 6;
-  for (const [etiqueta, valor] of detalles) {
-    doc.font(f.normal).fontSize(9).fillColor(C.secundario).text(etiqueta, xCaja + 10, yDetalle, { width: 70 });
-    doc
-      .font(f.negrita)
-      .fontSize(9)
-      .fillColor(C.texto)
-      .text(valor, xCaja + 80, yDetalle, { width: anchoCaja - 90, align: "right" });
-    yDetalle += 13;
-  }
-
-  const y = Math.max(yDatos, top + altoCaja) + 12;
-  linea(doc, y, 1.5, C.borde);
-  return y + 14;
+    .text(pesos(datos.total), x + 100, yCaja + 10, { width: anchoCaja - 114, align: "right" });
+  return yCaja + altoCaja + 24;
 }
 
-// Datos del cliente en un recuadro de borde fino, en dos columnas
+// ─── Factura ───
+
+// Datos del receptor: condicion frente al IVA (consumidor final) y sus datos de contacto
 function bloqueCliente(doc: Doc, f: Fuentes, datos: DatosPdf, y: number) {
   const { cliente } = datos;
   const ancho = anchoUtil(doc);
   const campos: [string, string | null][] = [
-    ["Nombre", cliente.nombre],
+    ["Apellido y nombre", cliente.nombre],
+    ["Condición frente al IVA", COMERCIO.condicionIvaCliente],
+    ["Domicilio", cliente.direccion],
     ["Email", cliente.correo],
-    ["Dirección", cliente.direccion],
     ["Teléfono", cliente.telefono],
+    ["Condición de venta", datos.tipo === "FACTURA" ? "Contado - Mercado Pago" : "A convenir"],
   ];
   const visibles = campos.filter((c): c is [string, string] => !!c[1]);
   const filas = Math.ceil(visibles.length / 2);
-  const alto = 24 + filas * 14;
+  const alto = 10 + filas * 14;
 
   doc.rect(MARGEN, y, ancho, alto).lineWidth(0.75).strokeColor(C.borde).stroke();
-  doc.font(f.negrita).fontSize(9).fillColor(C.texto).text("CLIENTE", MARGEN + 10, y + 8, { characterSpacing: 1 });
-
   const anchoColumna = (ancho - 20) / 2;
   visibles.forEach(([etiqueta, valor], i) => {
     const x = MARGEN + 10 + (i % 2) * anchoColumna;
-    const yCampo = y + 22 + Math.floor(i / 2) * 14;
-    doc.font(f.normal).fontSize(9).fillColor(C.secundario).text(`${etiqueta}:`, x, yCampo, { continued: true });
+    const yCampo = y + 7 + Math.floor(i / 2) * 14;
+    doc.font(f.normal).fontSize(8.5).fillColor(C.secundario).text(`${etiqueta}:`, x, yCampo, { continued: true });
     doc.font(f.negrita).fillColor(C.texto).text(` ${valor}`, { width: anchoColumna - 10, lineBreak: false, ellipsis: true });
   });
-  return y + alto + 18;
+  return y + alto + 14;
 }
 
 // Titulos de la tabla: texto en negrita entre dos lineas negras (sin fondo)
@@ -209,9 +330,16 @@ function tablaItems(doc: Doc, f: Fuentes, datos: DatosPdf, yInicial: number) {
   let y = filaTitulos(doc, f, asegurarEspacio(doc, yInicial, ALTO_FILA_MIN * 2));
 
   datos.items.forEach((item, i) => {
-    const celdas = [item.nombre, String(item.cantidad), pesos(item.precioUnitario), pesos(item.subtotal)];
+    const celdas = [
+      String(item.cantidad),
+      item.nombre,
+      pesos(item.precioUnitario),
+      // Sin IVA (servicios): se deja la alicuota vacia
+      alicuotaDe(item) > 0 ? `${porcentaje(alicuotaDe(item))} %` : "—",
+      pesos(item.subtotal),
+    ];
     doc.font(f.normal).fontSize(9.5);
-    const altoNombre = doc.heightOfString(item.nombre, { width: COLUMNAS[0].ancho - PADDING * 2 });
+    const altoNombre = doc.heightOfString(item.nombre, { width: COLUMNAS[COL_DESCRIPCION].ancho - PADDING * 2 });
     const alto = Math.max(ALTO_FILA_MIN, altoNombre + 12);
 
     const yAntes = y;
@@ -221,7 +349,7 @@ function tablaItems(doc: Doc, f: Fuentes, datos: DatosPdf, yInicial: number) {
     let x = MARGEN;
     COLUMNAS.forEach((col, c) => {
       doc
-        .font(c === 3 ? f.negrita : f.normal)
+        .font(c === COL_IMPORTE ? f.negrita : f.normal)
         .fontSize(9.5)
         .fillColor(C.texto)
         .text(celdas[c], x + PADDING, y + 6, { width: col.ancho - PADDING * 2, align: col.alinear });
@@ -242,30 +370,52 @@ function tablaItems(doc: Doc, f: Fuentes, datos: DatosPdf, yInicial: number) {
   return y + 12;
 }
 
-// Total en un recuadro de borde doble (se distingue bien en cualquier impresora)
+// Totales de Factura B: subtotal, IVA contenido (Regimen de Transparencia Fiscal al Consumidor,
+// Ley 27.743) y el total en un recuadro de borde doble (se distingue bien en cualquier impresora)
 function bloqueTotal(doc: Doc, f: Fuentes, datos: DatosPdf, yInicial: number) {
-  const y = asegurarEspacio(doc, yInicial, 64);
+  const y = asegurarEspacio(doc, yInicial, 120);
+  const ancho = anchoUtil(doc);
   const anchoCaja = 240;
-  const x = MARGEN + anchoUtil(doc) - anchoCaja;
+  const x = MARGEN + ancho - anchoCaja;
   const unidades = datos.items.reduce((acc, i) => acc + i.cantidad, 0);
 
-  doc
-    .font(f.normal)
-    .fontSize(9)
-    .fillColor(C.secundario)
-    .text(`Cantidad de productos: ${unidades}`, x, y, { width: anchoCaja, align: "right" });
+  const fila = (etiqueta: string, valor: string, yFila: number) => {
+    doc.font(f.normal).fontSize(9).fillColor(C.secundario).text(etiqueta, x, yFila, { width: anchoCaja - 100 });
+    doc.font(f.negrita).fontSize(9).fillColor(C.texto).text(valor, x + anchoCaja - 110, yFila, { width: 110, align: "right" });
+  };
+  fila(`Subtotal (${unidades} ${unidades === 1 ? "unidad" : "unidades"})`, pesos(datos.total), y);
+  fila("Importe otros tributos", pesos(0), y + 13);
 
-  const yCaja = y + 16;
+  const yCaja = y + 30;
   const altoCaja = 36;
   doc.rect(x, yCaja, anchoCaja, altoCaja).lineWidth(2).strokeColor(C.borde).stroke();
   doc.rect(x + 3, yCaja + 3, anchoCaja - 6, altoCaja - 6).lineWidth(0.5).strokeColor(C.borde).stroke();
-  doc.font(f.negrita).fontSize(10).fillColor(C.texto).text("TOTAL (ARS)", x + 14, yCaja + 13, { width: 90 });
+  doc.font(f.negrita).fontSize(10).fillColor(C.texto).text("IMPORTE TOTAL", x + 14, yCaja + 13, { width: 100 });
   doc
     .font(f.negrita)
     .fontSize(15)
     .fillColor(C.texto)
-    .text(pesos(datos.total), x + 100, yCaja + 10, { width: anchoCaja - 114, align: "right" });
-  return yCaja + altoCaja + 24;
+    .text(pesos(datos.total), x + 110, yCaja + 10, { width: anchoCaja - 124, align: "right" });
+
+  // Regimen de Transparencia Fiscal al Consumidor: a la izquierda de los totales
+  const anchoTransp = ancho - anchoCaja - 20;
+  const yTransp = y;
+  const ivas = ivaPorAlicuota(datos.items);
+  const altoTransp = 30 + (ivas.length + 1) * 14;
+  doc.rect(MARGEN, yTransp, anchoTransp, altoTransp).lineWidth(0.75).strokeColor(C.borde).stroke();
+  doc
+    .font(f.negrita)
+    .fontSize(8)
+    .fillColor(C.texto)
+    .text("Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)", MARGEN + 8, yTransp + 7, { width: anchoTransp - 16 });
+  const filaTransp = (etiqueta: string, valor: string, yFila: number) => {
+    doc.font(f.normal).fontSize(8.5).fillColor(C.secundario).text(etiqueta, MARGEN + 8, yFila, { width: anchoTransp - 110 });
+    doc.font(f.negrita).fontSize(8.5).fillColor(C.texto).text(valor, MARGEN + anchoTransp - 108, yFila, { width: 100, align: "right" });
+  };
+  ivas.forEach(([a, iva], i) => filaTransp(`IVA contenido (${porcentaje(a)}%)`, pesos(iva), yTransp + 24 + i * 14));
+  filaTransp("Otros impuestos nacionales indirectos", pesos(0), yTransp + 24 + ivas.length * 14);
+
+  return Math.max(yCaja + altoCaja, yTransp + altoTransp) + 18;
 }
 
 function leyenda(doc: Doc, f: Fuentes, datos: DatosPdf, yInicial: number) {
