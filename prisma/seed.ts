@@ -1584,6 +1584,11 @@ const servicios: {
   { codigo: "SOFTWARE_VLC", grupo: "SOFTWARE", nombre: "VLC", precio: 2000 },
 ];
 
+// Alicuota de IVA por categoria (el resto, 21%)
+const alicuotasPorCategoria: Partial<Record<NombreCategoria, number>> = {
+  "Memorias RAM": 10.5,
+};
+
 const tiposNotificacion = [
   {
     codigo: "VENTA_CONFIRMADA",
@@ -1902,6 +1907,15 @@ async function main() {
     serviciosCreados++;
   }
   console.log(`Servicios nuevos creados: ${serviciosCreados}.`);
+
+  // ALICUOTAS DE IVA: se ejecuta SIEMPRE. Lo que no esta aca queda en 21% (el default de la columna).
+  for (const [categoria, alicuotaIva] of entries(alicuotasPorCategoria)) {
+    const { count } = await prisma.producto.updateMany({
+      where: { categoria: { nombre: categoria }, alicuotaIva: { not: alicuotaIva } },
+      data: { alicuotaIva },
+    });
+    console.log(`Alícuota ${alicuotaIva}% en "${categoria}": ${count} productos actualizados.`);
+  }
   console.log("Seed finalizado correctamente.");
 }
 

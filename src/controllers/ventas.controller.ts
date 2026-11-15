@@ -2,6 +2,7 @@ import { error } from "node:console";
 import { prisma } from "../utils/prisma";
 import { crearNotificacionCompra } from "../utils/notificaciones";
 import { cotizacionParaVenta } from "../utils/cotizacion";
+import { preciosProducto, preciosServicio } from "../utils/iva";
 import { emitirFacturaSinFallar } from "../utils/documentos";
 
 export async function procesarCompraAprobadaUnidad(
@@ -33,7 +34,9 @@ export async function procesarCompraAprobadaUnidad(
       );
     }
     //Creamos lo que va en detalleVenta
-    let totalVenta = Number(producto.precio) * cantidad;
+    // Se cobra con IVA
+    const { final, alicuotaIva } = preciosProducto(producto);
+    let totalVenta = Math.round(final * cantidad * 100) / 100;
 
     const nuevaVenta = await tx.venta.create({
       data: {
@@ -46,7 +49,8 @@ export async function procesarCompraAprobadaUnidad(
           create: {
             idProducto: idProducto,
             cantidad: cantidad,
-            precioUnitario: producto.precio,
+            precioUnitario: final,
+            alicuotaIva,
           },
         },
       },
@@ -96,15 +100,19 @@ export async function procesarCompraAprobadaCarrito(
     let totalVenta = 0;
     // Cada item es un producto o un servicio del armador (armado de PC, instalacion de Windows...)
     const detallesParaInsertar = carrito.items.map((item) => {
-      const precio = item.producto ? item.producto.precio : (item.servicio?.precio ?? 0);
-      const subtotal = Number(precio) * item.cantidad;
+      // Lo que se cobra por unidad, con IVA
+      const { final, alicuotaIva } = item.producto
+        ? preciosProducto(item.producto)
+        : preciosServicio(item.servicio!);
+      const subtotal = Math.round(final * item.cantidad * 100) / 100;
       totalVenta += subtotal;
 
       return {
         idProducto: item.idProducto,
         idServicio: item.idServicio,
         cantidad: item.cantidad,
-        precioUnitario: precio,
+        precioUnitario: final,
+        alicuotaIva,
       };
     });
 

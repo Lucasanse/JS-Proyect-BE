@@ -3,6 +3,7 @@ import type { Servicio } from "@prisma/client";
 import { prisma } from "../utils/prisma";
 import { AppError } from "../utils/AppError";
 import type { GrupoServicio } from "../utils/servicios";
+import { preciosServicio } from "../utils/iva";
 import {
   actualizarServicioSchema,
   crearProgramaSchema,
@@ -20,7 +21,10 @@ export interface ServicioAdmin {
   grupo: GrupoServicio;
   nombre: string;
   descripcion: string;
-  precio: number | null; // en pesos; null = a presupuestar (no se puede cambiar)
+  precio: number | null; // en pesos, tal como se cargo; null = a presupuestar (no se puede cambiar)
+  ivaIncluido: boolean; // si "precio" ya incluye el IVA
+  alicuotaIva: number; // 21, 10.5 o 0 (exento)
+  precioFinal: number | null; // con IVA: lo que paga el cliente
   activo: boolean; // inactivo = no se ofrece
 }
 
@@ -31,6 +35,9 @@ const mapearServicio = (s: Servicio): ServicioAdmin => ({
   nombre: s.nombre,
   descripcion: s.descripcion,
   precio: s.precio?.toNumber() ?? null,
+  ivaIncluido: s.ivaIncluido,
+  alicuotaIva: s.alicuotaIva.toNumber(),
+  precioFinal: s.precio === null ? null : preciosServicio(s).final,
   activo: s.activo,
 });
 
@@ -54,7 +61,7 @@ const codigoPrograma = (nombre: string) =>
 // POST /api/admin/servicios/programas  { nombre, precio }
 // Agrega un programa para instalar en servicio tecnico. Es el unico servicio que se puede crear.
 export async function crearPrograma(req: Request, res: Response<ServicioAdmin>) {
-  const { nombre, precio } = crearProgramaSchema.parse(req.body);
+  const { nombre, precio, ivaIncluido, alicuotaIva } = crearProgramaSchema.parse(req.body);
   const codigo = codigoPrograma(nombre);
   if (codigo === "SOFTWARE_") throw new AppError(400, "El nombre tiene que tener letras o números");
 
@@ -63,15 +70,15 @@ export async function crearPrograma(req: Request, res: Response<ServicioAdmin>) 
 
   const ultimo = await prisma.servicio.aggregate({ where: { grupo: "SOFTWARE" }, _max: { orden: true } });
   const servicio = await prisma.servicio.create({
-    data: { codigo, grupo: "SOFTWARE", nombre, precio, orden: (ultimo._max.orden ?? 0) + 1 },
+    data: { codigo, grupo: "SOFTWARE", nombre, precio, ivaIncluido, alicuotaIva, orden: (ultimo._max.orden ?? 0) + 1 },
   });
   res.status(201).json(mapearServicio(servicio));
 }
 
-// PATCH /api/admin/servicios/:id  { precio?, activo? }
+// PATCH /api/admin/servicios/:id  { precio?, activo?, ivaIncluido?, alicuotaIva? }
 export async function actualizarServicio(req: Request, res: Response<ServicioAdmin>) {
   const { id } = idServicioParamSchema.parse(req.params);
-  const { precio, activo } = actualizarServicioSchema.parse(req.body);
+  const { precio, activo, ivaIncluido, alicuotaIva } = actualizarServicioSchema.parse(req.body);
 
   const existente = await prisma.servicio.findUnique({ where: { idServicio: id } });
   if (!existente) throw new AppError(404, "Servicio no encontrado");
@@ -84,7 +91,7 @@ export async function actualizarServicio(req: Request, res: Response<ServicioAdm
 
   const servicio = await prisma.servicio.update({
     where: { idServicio: id },
-    data: { activo, precio },
+    data: { activo, precio, ivaIncluido, alicuotaIva },
   });
   res.json(mapearServicio(servicio));
 }

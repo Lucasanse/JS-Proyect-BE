@@ -145,6 +145,10 @@ model Producto {
   // con la cotizacion cada vez que se actualiza) o "ARS" (el valor real es "precio" y no se mueve).
   monedaBase  String   @default("ARS") @map("moneda_base")
   precioUsd   Decimal? @map("precio_usd") @db.Decimal(10, 2)
+  // IVA: "precio" (y "precioUsd") se guardan tal como los cargo el admin, con o sin IVA.
+  // El neto y el final se calculan con la alicuota (src/utils/iva.ts). Lo que se cobra es el final.
+  ivaIncluido Boolean  @default(false) @map("iva_incluido")
+  alicuotaIva Decimal  @default(21) @map("alicuota_iva") @db.Decimal(4, 2) // 21 o 10.5
   stock       Int     @map("stock")
   imagenUrl   String? @map("imagen_url")
   // Baja logica: un producto con ventas no se borra, se desactiva y deja de
@@ -305,7 +309,8 @@ model DetalleVenta {
   idProducto     Int?    @map("id_producto")
   idServicio     Int?    @map("id_servicio")
   cantidad       Int     @map("cantidad")
-  precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2)
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2) // lo cobrado por unidad, con IVA
+  alicuotaIva    Decimal @default(21) @map("alicuota_iva") @db.Decimal(4, 2) // IVA incluido en precioUnitario
 
   venta    Venta     @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
   producto Producto? @relation(fields: [idProducto], references: [idProducto], onDelete: Restrict)
@@ -490,6 +495,10 @@ model Servicio {
   nombre      String   @map("nombre") // en espanol (el FE traduce los de servicio tecnico por codigo)
   descripcion String   @default("") @map("descripcion")
   precio      Decimal? @map("precio") @db.Decimal(10, 2) // null = a presupuestar (REPARACION, OTRO)
+  // IVA, como en Producto: "precio" se guarda tal como lo cargo el admin (con o sin IVA).
+  // alicuotaIva 0 = exento (no se le suma IVA). Ver src/utils/iva.ts
+  ivaIncluido Boolean  @default(false) @map("iva_incluido")
+  alicuotaIva Decimal  @default(21) @map("alicuota_iva") @db.Decimal(4, 2) // 21, 10.5 o 0
   activo      Boolean  @default(true) @map("activo") // inactivo = no se ofrece
   orden       Int      @default(0) @map("orden")
 

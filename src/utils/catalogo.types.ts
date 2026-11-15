@@ -24,7 +24,9 @@ interface ProductoComun {
   nombre: string;
   descripcion: string;
   marca: string;
-  precio: number;
+  precio: number; // en pesos, sin IVA
+  precioFinal: number; // en pesos, con IVA (lo que se cobra)
+  alicuotaIva: number; // 21 o 10.5
   stock: number;
   imagenUrl: string | null;
   categoria: CategoriaResumen;
@@ -67,6 +69,8 @@ export interface ProductoAdmin {
   precio: number; // en pesos
   monedaBase: "USD" | "ARS"; // moneda en la que queda fijo el precio
   precioUsd: number | null; // valor fijo en dolares (solo con monedaBase USD)
+  ivaIncluido: boolean; // si "precio" y "precioUsd" incluyen el IVA
+  alicuotaIva: number; // 21 o 10.5
   stock: number;
   imagenUrl: string | null;
   activo: boolean;
@@ -106,12 +110,16 @@ export interface TipoComponenteAdmin {
 // GET /api/carrito
 // Un item del carrito es un producto o un servicio del armador (armado de PC, instalacion de Windows...).
 // Los servicios van una sola vez y no tienen stock.
+// subtotal: sin IVA; subtotalFinal: con IVA
 export type ItemCarritoDetalle =
-  | { tipo: "PRODUCTO"; producto: ProductoResumen; servicio: null; cantidad: number; subtotal: number }
-  | { tipo: "SERVICIO"; producto: null; servicio: ServicioResumen; cantidad: number; subtotal: number };
+  | { tipo: "PRODUCTO"; producto: ProductoResumen; servicio: null; cantidad: number; subtotal: number; subtotalFinal: number }
+  | { tipo: "SERVICIO"; producto: null; servicio: ServicioResumen; cantidad: number; subtotal: number; subtotalFinal: number };
 
+// subtotal (sin IVA) + iva = total (lo que se paga)
 export interface CarritoDetalle {
   items: ItemCarritoDetalle[];
   cantidadTotal: number;
+  subtotal: number;
+  iva: number;
   total: number;
 }

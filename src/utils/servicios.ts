@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { AppError } from "./AppError";
+import { preciosServicio } from "./iva";
 import type { Software, TipoServicio } from "./servicioTecnico.catalogo";
 
 // Servicios del local (tabla Servicio). Ver el comentario del modelo en schema.prisma.
@@ -21,7 +22,9 @@ export interface ServicioResumen {
   codigo: string;
   nombre: string;
   descripcion: string;
-  precio: number;
+  precio: number; // sin IVA
+  precioFinal: number; // con IVA
+  alicuotaIva: number;
 }
 
 // Nombre y descripcion en el idioma pedido (si no hay traduccion, en espanol)
@@ -43,7 +46,9 @@ export function mapearServicioResumen(s: ServicioConTraduccion): ServicioResumen
     codigo: s.codigo,
     nombre: t ? t.nombreTraducido : s.nombre,
     descripcion: t ? t.descripcionTraducida : s.descripcion,
-    precio: s.precio?.toNumber() ?? 0,
+    ...(({ neto, final, alicuotaIva }) => ({ precio: neto, precioFinal: final, alicuotaIva }))(
+      preciosServicio(s),
+    ),
   };
 }
 
@@ -78,7 +83,8 @@ export async function cargarServiciosArmador(ids: number[], codigoIdioma = "es")
 export interface PrecioSolicitud {
   codigo: string;
   nombre: string; // como se llamaba al pedirlo (los programas los puede agregar el admin)
-  precio: number | null; // null = a presupuestar
+  precio: number | null; // con IVA; null = a presupuestar
+  alicuotaIva: number; // IVA incluido en precio (0 = exento)
 }
 
 // Instalacion de software no tiene precio propio: se cobra cada programa
@@ -107,7 +113,13 @@ export async function preciosDeSolicitud(codigos: string[]) {
     const s = porCodigo.get(codigo);
     if (!s && codigo.startsWith("SOFTWARE_")) throw new AppError(400, "Uno de los programas elegidos ya no está disponible");
     if (!s || !s.activo) throw new AppError(400, `"${s?.nombre ?? codigo}" no está disponible en este momento`);
-    return { codigo, nombre: s.nombre, precio: s.precio?.toNumber() ?? null };
+    // Con IVA: es lo que se abona en el local
+    return {
+      codigo,
+      nombre: s.nombre,
+      precio: s.precio === null ? null : preciosServicio(s).final,
+      alicuotaIva: s.alicuotaIva.toNumber(),
+    };
   });
   const total = precios.reduce((acc, p) => acc + (p.precio ?? 0), 0);
   return { precios, precioEstimado: Math.round(total * 100) / 100 };

@@ -12,6 +12,7 @@ import {
 import type { SolicitudDetalle, SolicitudResumen } from "../utils/servicioTecnico.types";
 import { crearSolicitudSchema, idSolicitudParamSchema } from "../validations/servicioTecnico.validation";
 import { codigosDeSolicitud, preciosDeSolicitud, type GrupoServicio } from "../utils/servicios";
+import { preciosServicio } from "../utils/iva";
 
 // Rutas del cliente: todas pasan por requireAuth y cada usuario solo ve sus solicitudes.
 // Better Auth devuelve el id como string; en la base es Int.
@@ -21,7 +22,9 @@ export interface PrecioServicioTecnico {
   codigo: string; // LIMPIEZA, EXTRA_BACKUP, SOFTWARE_WIN10...
   nombre: string;
   grupo: Exclude<GrupoServicio, "ARMADOR">;
-  precio: number | null; // null = a presupuestar
+  precio: number | null; // con IVA; null = a presupuestar
+  precioNeto: number | null; // sin IVA
+  alicuotaIva: number; // 21, 10.5 o 0 (exento)
 }
 
 // GET /api/servicio-tecnico/precios  (publico)
@@ -37,7 +40,9 @@ export async function listarPreciosServicioTecnico(_req: Request, res: Response<
       codigo: s.codigo,
       nombre: s.nombre,
       grupo: s.grupo as PrecioServicioTecnico["grupo"],
-      precio: s.precio?.toNumber() ?? null,
+      precio: s.precio === null ? null : preciosServicio(s).final,
+      precioNeto: s.precio === null ? null : preciosServicio(s).neto,
+      alicuotaIva: s.alicuotaIva.toNumber(),
     })),
   );
 }

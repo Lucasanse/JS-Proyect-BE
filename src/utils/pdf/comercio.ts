@@ -5,14 +5,22 @@ import path from "node:path";
 export const COMERCIO = {
   nombre: "JS Computación",
   razonSocial: "JS Computación S.R.L.",
-  cuit: "30123456789",
+  cuit: "20172395210",
   condicionIva: "IVA Responsable Inscripto",
   direccion: "R Sáenz Peña, 97 Allen, Rio Negro",
-  telefono: "+54 2984 123-5678",
+  telefono: "+54 9 298 495-7572",
   email: "ventas@jscomputacion.com",
   web: "www.jscomputacion.com.ar",
   // Punto de venta que precede al numero del comprobante: 0001-00000012
   puntoVenta: 1,
+
+  // Datos fiscales del encabezado, con formato de Factura B (los de la factura en papel del local).
+  // Verificarlos con el contador: se tomaron de una foto.
+  ingresosBrutos: "2001766/9",
+  inicioActividades: "15/09/1994",
+  // Por ahora se vende a consumidor final (Factura B: el IVA va incluido en lo cobrado).
+  // La alicuota de IVA es de cada producto (ver src/utils/iva.ts).
+  condicionIvaCliente: "Consumidor Final",
 
   // PNG o JPG (PDFKit no lee SVG ni WebP)
   logo: path.resolve(process.cwd(), "assets", "logo.png"),
