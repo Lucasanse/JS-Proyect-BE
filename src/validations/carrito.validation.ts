@@ -15,3 +15,8 @@ export const modificarCantidadSchema = z.object({
 export const idProductoParamSchema = z.object({
   idProducto: z.coerce.number().int().min(1),
 });
+
+// :idServicio en la URL
+export const idServicioParamSchema = z.object({
+  idServicio: z.coerce.number().int().min(1),
+});

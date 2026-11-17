@@ -58,6 +58,12 @@ export const productoSchema = z.object({
     .positive("El precio debe ser mayor a 0")
     .max(99_999_999.99, "El precio es demasiado alto")
     .transform((p) => Math.round(p * 100) / 100),
+  // Si "precio" ya incluye el IVA y con que alicuota (21 o 10,5)
+  ivaIncluido: z.boolean({ error: "ivaIncluido debe ser true o false" }).default(false),
+  alicuotaIva: z.coerce
+    .number({ error: "Elegí la alícuota de IVA" })
+    .refine((a) => a === 21 || a === 10.5, { message: "La alícuota de IVA tiene que ser 21 o 10,5" })
+    .default(21),
   stock: z.coerce
     .number({ error: "El stock debe ser un número" })
     .int("El stock debe ser un número entero")
@@ -73,6 +79,12 @@ export const productoParcialSchema = z
   .object({
     ...productoSchema.shape,
     moneda: z.enum(["ARS", "USD"]).optional(),
+    // Sin default: si no vienen, no se tocan
+    ivaIncluido: z.boolean({ error: "ivaIncluido debe ser true o false" }).optional(),
+    alicuotaIva: z.coerce
+      .number({ error: "Elegí la alícuota de IVA" })
+      .refine((a) => a === 21 || a === 10.5, { message: "La alícuota de IVA tiene que ser 21 o 10,5" })
+      .optional(),
     imagenUrl: imagenUrlSchema,
     traduccionEn: traduccionSchema.nullable(),
     componente: componenteSchema.nullable(),

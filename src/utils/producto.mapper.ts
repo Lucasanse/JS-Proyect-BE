@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import type { ProductoResumen } from "./catalogo.types";
+import { preciosProducto } from "./iva";
 
 // ─── Include de Prisma ────────────────────────────────────────────────
 // Recibe el codigo de idioma y filtra la traduccion correspondiente.
@@ -34,6 +35,12 @@ type ProductoConResumen = Prisma.ProductoGetPayload<{
 
 // ─── Mapper: modelo de Prisma -> DTO de respuesta ────────────────────
 
+// precio (sin IVA), precioFinal (con IVA) y alicuotaIva, para cualquier producto de la base
+export function preciosIva(p: Parameters<typeof preciosProducto>[0]) {
+  const { neto, final, alicuotaIva } = preciosProducto(p);
+  return { precio: neto, precioFinal: final, alicuotaIva };
+}
+
 export function mapearResumen(p: ProductoConResumen): ProductoResumen {
   const traduccion = p.traducciones[0];
 
@@ -42,7 +49,7 @@ export function mapearResumen(p: ProductoConResumen): ProductoResumen {
     nombre: traduccion ? traduccion.nombreTraducido : p.nombre,
     descripcion: traduccion ? traduccion.descripcionTraducida : p.descripcion,
     marca: p.marca.nombre,
-    precio: p.precio.toNumber(),
+    ...preciosIva(p),
     stock: p.stock,
     imagenUrl: p.imagenUrl,
     disponible: p.stock > 0,
