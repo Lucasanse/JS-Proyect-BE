@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
+import { formatearNumero } from "../utils/documentos";
 
 const prisma = new PrismaClient();
 
@@ -19,6 +20,7 @@ export const obtenerNotificaciones = async (req: Request, res: Response) => {
       include: {
         tipoNotificacion: true,
         venta: true,
+        documento: { select: { idDocumento: true, numero: true, idVenta: true, tipo: true } },
       },
     });
 
@@ -31,12 +33,27 @@ export const obtenerNotificaciones = async (req: Request, res: Response) => {
           .replace("{idVenta}", notif.venta.idVenta.toString())
           .replace("{total}", notif.venta.total.toString());
       }
+      if (notif.documento) {
+        mensajeFinal = mensajeFinal
+          .replace("{numero}", formatearNumero(notif.documento.numero))
+          .replace("{idVenta}", String(notif.documento.idVenta ?? ""));
+      }
       return {
         id: notif.idNotificacion,
         mensaje: mensajeFinal,
         leida: notif.leida,
         fecha: notif.fecha,
         tipo: notif.tipoNotificacion.codigo,
+        // Presupuesto o factura: el FE lo descarga directo desde la notificacion
+        idDocumento: notif.idDocumento,
+        documento: notif.documento
+          ? {
+              id: notif.documento.idDocumento,
+              tipo: notif.documento.tipo,
+              numero: formatearNumero(notif.documento.numero),
+              idVenta: notif.documento.idVenta,
+            }
+          : null,
       };
     });
 

@@ -7,10 +7,8 @@ import { detalleCarrito, obtenerOCrearCarrito } from "./carrito.controller";
 import {
   CATEGORIAS_PERIFERICOS,
   CATEGORIA_MONITORES,
-  CATEGORIA_SERVICIOS,
   PASO_MONITOR,
   PASO_PERIFERICOS,
-  PASO_SERVICIOS,
   calcularPotencia,
   esTipoArmador,
   incompatibilidadesDe,
@@ -26,7 +24,9 @@ import type {
   ProductoArmador,
   ValidacionArmado,
 } from "../utils/armador.types";
+import { cargarServiciosArmador, serviciosArmadorActivos, type ServicioResumen } from "../utils/servicios";
 import {
+  agregarArmadoSchema,
   compatiblesSchema,
   guardarPresetSchema,
   idPresetParamSchema,
@@ -80,7 +80,6 @@ const tipoArmadorDe = (p: ProductoConAtributos) => {
 const esMonitor = (p: ProductoConAtributos) => !p.componentePC && p.categoria.nombre === CATEGORIA_MONITORES;
 const esPeriferico = (p: ProductoConAtributos) =>
   esMonitor(p) || (!p.componentePC && CATEGORIAS_PERIFERICOS.includes(p.categoria.nombre));
-const esServicio = (p: ProductoConAtributos) => !p.componentePC && p.categoria.nombre === CATEGORIA_SERVICIOS;
 
 // Se puede usar en el armador: un componente de alguno de los pasos o un periferico.
 // Los servicios no se guardan en los armados: se eligen al comprar.
@@ -89,11 +88,11 @@ const esDelArmador = (p: ProductoConAtributos) => !!tipoArmadorDe(p) || esPerife
 function mapearArmador(p: ProductoConAtributos, cantidad = 1): ProductoCargado {
   const tipo = tipoArmadorDe(p);
   if (!p.componentePC || !tipo) {
-    if (!esPeriferico(p) && !esServicio(p)) throw new AppError(400, `"${p.nombre}" no se puede usar en el armador`);
+    if (!esPeriferico(p)) throw new AppError(400, `"${p.nombre}" no se puede usar en el armador`);
     return {
       producto: {
         ...mapearResumen(p),
-        paso: esServicio(p) ? PASO_SERVICIOS : esMonitor(p) ? PASO_MONITOR : PASO_PERIFERICOS,
+        paso: esMonitor(p) ? PASO_MONITOR : PASO_PERIFERICOS,
         watts: 0,
         especificaciones: [],
       },
@@ -246,21 +245,17 @@ export async function sugerirFuente(req: Request, res: Response<FuenteSugeridaRe
 
 // GET /api/armador/servicios?lang=
 // Servicios que se pueden sumar al armado al comprarlo (armado, instalacion de Windows...)
-export async function listarServicios(req: Request, res: Response<ProductoArmador[]>) {
+export async function listarServicios(req: Request, res: Response<ServicioResumen[]>) {
   const { lang } = langQuerySchema.parse(req.query);
-  const servicios = await prisma.producto.findMany({
-    where: { activo: true, componentePC: null, categoria: { nombre: CATEGORIA_SERVICIOS } },
-    include: crearIncludeArmador(lang),
-    orderBy: { idProducto: "asc" },
-  });
-  res.json(servicios.map((p) => mapearArmador(p).producto));
+  res.json(await serviciosArmadorActivos(lang));
 }
 
-// POST /api/armador/carrito  { seleccion }
-// Agrega todo el armado al carrito. Solo si esta completo y no tiene incompatibilidades.
+// POST /api/armador/carrito  { seleccion, servicios }
+// Agrega todo el armado al carrito, con los servicios elegidos. Solo si esta completo y no tiene incompatibilidades.
 export async function agregarArmadoAlCarrito(req: Request, res: Response) {
-  const { seleccion } = seleccionBodySchema.parse(req.body);
+  const { seleccion, servicios: idsServicios } = agregarArmadoSchema.parse(req.body);
   const cargados = await cargarSeleccion(seleccion);
+  const servicios = await cargarServiciosArmador(idsServicios);
   const validacion = armarValidacion(cargados);
   if (!validacion.valida) return rechazar(res, "El armado tiene componentes incompatibles", validacion);
   if (!validacion.completa) return rechazar(res, "Faltan componentes obligatorios en el armado", validacion);
@@ -271,8 +266,7 @@ export async function agregarArmadoAlCarrito(req: Request, res: Response) {
     for (const { producto, cantidad: aAgregar } of cargados) {
       const clave = { idCarrito_idProducto: { idCarrito: carrito.idCarrito, idProducto: producto.id } };
       const existente = await tx.itemCarrito.findUnique({ where: clave });
-      // Un servicio va una sola vez, aunque se agregue otro armado que tambien lo tenga
-      const cantidad = producto.paso === PASO_SERVICIOS ? 1 : (existente?.cantidad ?? 0) + aAgregar;
+      const cantidad = (existente?.cantidad ?? 0) + aAgregar;
       if (cantidad > producto.stock) {
         throw new AppError(400, `Stock insuficiente de "${producto.nombre}". Disponible: ${producto.stock}`);
       }
@@ -280,6 +274,14 @@ export async function agregarArmadoAlCarrito(req: Request, res: Response) {
         where: clave,
         create: { idCarrito: carrito.idCarrito, idProducto: producto.id, cantidad },
         update: { cantidad },
+      });
+    }
+    // Un servicio va una sola vez, aunque se agregue otro armado que tambien lo tenga
+    for (const servicio of servicios) {
+      await tx.itemCarrito.upsert({
+        where: { idCarrito_idServicio: { idCarrito: carrito.idCarrito, idServicio: servicio.id } },
+        create: { idCarrito: carrito.idCarrito, idServicio: servicio.id, cantidad: 1 },
+        update: { cantidad: 1 },
       });
     }
   });

@@ -1,5 +1,6 @@
 import type { EstadoSolicitud } from "./servicioTecnico.estados";
 import type { Paginado } from "./catalogo.types";
+import type { PrecioSolicitud } from "./servicios";
 import type { Software, TipoEquipo, TipoServicio } from "./servicioTecnico.catalogo";
 
 export interface ClienteSolicitud {
@@ -19,6 +20,11 @@ export interface SolicitudResumen {
   conPastaTermica: boolean; // solo con LIMPIEZA
   conSSD: boolean; // solo con OPTIMIZACION
   descripcion: string | null;
+  // Precios al crear la solicitud (precio null = a presupuestar) y la suma de los fijos.
+  // Se abona en el local; si hay algo a presupuestar, el total final puede ser mayor.
+  precios: PrecioSolicitud[];
+  precioEstimado: number;
+  aPresupuestar: boolean;
   estado: EstadoSolicitud;
   fecha: Date;
   actualizadoEn: Date;
