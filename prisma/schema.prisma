@@ -116,7 +116,7 @@ model Idioma {
 model Categoria {
   idCategoria Int    @id @default(autoincrement()) @map("id_categoria")
   nombre      String @unique @map("nombre")
-
+  nombreEN    String? @unique @map("name")
   productos Producto[]
 
   @@map("categorias")
@@ -183,6 +183,7 @@ model ComponentePC {
 model TipoComponente {
   idTipoComponente Int    @id @default(autoincrement()) @map("id_tipo_componente")
   nombre           String @unique @map("nombre")
+  nombreEN           String? @unique @map("nombreEN")
 
   componentes ComponentePC[]
   atributos   AtributoTecnico[]
@@ -195,6 +196,7 @@ model AtributoTecnico {
   idAtributo       Int      @id @default(autoincrement()) @map("id_atributo")
   idTipoComponente Int      @map("id_tipo_componente")
   nombre           String   @map("nombre")
+  nombreEN           String?   @map("nombreEN")
   unidad           String?  @map("unidad") // null si no tiene unidad (ej. socket)
   // numerico: el admin carga un numero (nucleos, GB...). Si no, texto con sugerencias.
   numerico         Boolean  @default(false) @map("numerico")
