@@ -4,14 +4,17 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 // ENDPOINT 1: Mostrar todas las notificaciones del usuario
-export const obtenerNotificaciones = async (req: Request, res: Response) => {
+export const obtenerNotificaciones = async (
+  req: Request<{ idUsuario: string }, unknown, unknown, { lang?: string }>,
+  res: Response,
+) => {
   try {
     const idUsuario = parseInt(req.params.idUsuario, 10);
 
     if (isNaN(idUsuario)) {
       return res.status(400).json({ error: "ID de usuario inválido" });
     }
-
+    const lang = (req.query.lang || "es").toLowerCase();
     // Buscamos las notificaciones ordenadas por fecha (las más nuevas primero)
     const notificaciones = await prisma.notificacion.findMany({
       where: { idUsuario },
@@ -24,8 +27,11 @@ export const obtenerNotificaciones = async (req: Request, res: Response) => {
 
     // Mapeamos para enviar un objeto limpio al frontend
     const notificacionesFormateadas = notificaciones.map((notif) => {
-      let mensajeFinal = notif.tipoNotificacion.plantillaMensaje;
+      let mensajeFinal = notif.tipoNotificacion.plantillaMensaje || "";
 
+      if (lang === "en" && notif.tipoNotificacion.plantillaMensajeEN) {
+        mensajeFinal = notif.tipoNotificacion.plantillaMensajeEN;
+      }
       if (notif.venta) {
         mensajeFinal = mensajeFinal
           .replace("{idVenta}", notif.venta.idVenta.toString())

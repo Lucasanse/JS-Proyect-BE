@@ -383,6 +383,7 @@ model TipoNotificacion {
   idTipoNotificacion Int    @id @default(autoincrement()) @map("id_tipo_notificacion")
   codigo             String @unique @map("codigo")
   plantillaMensaje   String @map("plantilla_mensaje")
+  plantillaMensajeEN   String? @map("plantilla_mensajeEN")
 
   notificaciones Notificacion[]
 

@@ -213,8 +213,8 @@ const atributosPorTipo = {
     {
       nombre: "Chipset",
       nombreEN: "Chipset",
-      opciones: [/* tus opciones de chipset */ "A520", "B550", "Z790"],
-    }, // <- Dejá tus opciones intactas
+      opciones: ["A520", "B550", "Z790"],
+    },
     { nombre: "Slots de memoria", nombreEN: "Memory Slots", numerico: true },
     {
       nombre: "Memoria maxima",
@@ -1137,18 +1137,22 @@ const tiposNotificacion = [
   {
     codigo: "VENTA_CONFIRMADA",
     plantillaMensaje: "Tu compra #{idVenta} fue confirmada.",
+    plantillaMensajeEN: "Your purchase #{idVenta} has been confirmed.",
   },
   {
     codigo: "VENTA_ENVIADA",
     plantillaMensaje: "Tu compra #{idVenta} fue enviada.",
+    plantillaMensajeEN: "Your purchase #{idVenta} has been shipped.",
   },
   {
     codigo: "SOLICITUD_RECIBIDA",
     plantillaMensaje: "Recibimos tu solicitud de servicio #{idSolicitud}.",
+    plantillaMensajeEN: "We received your service request #{idSolicitud}.",
   },
   {
     codigo: "SOLICITUD_DIAGNOSTICADA",
     plantillaMensaje: "Tu solicitud #{idSolicitud} ya tiene diagnostico.",
+    plantillaMensajeEN: "Your request #{idSolicitud} has been diagnosed.",
   },
 ];
 
@@ -1331,8 +1335,6 @@ async function main() {
       idsPorNombre[p.nombre] = producto.idProducto;
     }
 
-    await prisma.tipoNotificacion.createMany({ data: tiposNotificacion });
-
     const piezas: {
       nombre: (typeof componentes)[number]["nombre"];
       cantidad: number;
@@ -1405,7 +1407,18 @@ async function main() {
     });
     traduccionesCargadas++;
   }
-
+  let notificacionesCargadas = 0;
+  for (const notif of tiposNotificacion) {
+    await prisma.tipoNotificacion.upsert({
+      where: { codigo: notif.codigo },
+      create: notif,
+      update: { plantillaMensajeEN: notif.plantillaMensajeEN },
+    });
+    notificacionesCargadas++;
+  }
+  console.log(
+    `Tipos de notificacion sincronizados: ${notificacionesCargadas}.`,
+  );
   console.log(`Traducciones (en) sincronizadas: ${traduccionesCargadas}.`);
   console.log("Seed finalizado correctamente.");
 }
