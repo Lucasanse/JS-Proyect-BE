@@ -4,10 +4,15 @@ import crypto from "node:crypto";
 import multer from "multer";
 import { AppError } from "../utils/AppError";
 
-// Las imagenes se guardan en disco, en <raiz del proyecto>/uploads,
-// y app.ts las sirve como estaticos en /uploads.
+// Todo lo que sube o genera el BE va en <raiz del proyecto>/uploads, separado por carpetas:
+//   uploads/imagenes   imagenes de productos: server.ts las sirve como estaticos en /uploads/imagenes
+//   uploads/documentos PDF de presupuestos y facturas: NO son publicos, se descargan con sesion
 // (process.cwd() y no __dirname para que sea la misma carpeta con tsx y con el build en dist/)
 export const CARPETA_UPLOADS = path.resolve(process.cwd(), "uploads");
+export const CARPETA_IMAGENES = path.join(CARPETA_UPLOADS, "imagenes");
+export const CARPETA_DOCUMENTOS = path.join(CARPETA_UPLOADS, "documentos");
+// Parte de la URL publica de una imagen: <servidor>/uploads/imagenes/<archivo>
+export const RUTA_PUBLICA_IMAGENES = "/uploads/imagenes/";
 
 export const MAX_MB_IMAGEN = 5;
 
@@ -25,7 +30,7 @@ export const subirImagen = multer({
   storage: multer.diskStorage({
     // Se crea la carpeta si no existe (por ejemplo, en un clon nuevo del repo)
     destination: (_req, _file, cb) =>
-      fs.mkdir(CARPETA_UPLOADS, { recursive: true }, (err) => cb(err, CARPETA_UPLOADS)),
+      fs.mkdir(CARPETA_IMAGENES, { recursive: true }, (err) => cb(err, CARPETA_IMAGENES)),
     filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}${EXTENSIONES[file.mimetype]}`),
   }),
   limits: { fileSize: MAX_MB_IMAGEN * 1024 * 1024, files: 1 },
@@ -54,11 +59,10 @@ export const subirFotosIA = multer({
 // Las URLs externas (pegadas a mano por el admin) devuelven null.
 function archivoLocalDe(url: string | null | undefined): string | null {
   if (!url) return null;
-  const marca = "/uploads/";
-  const i = url.indexOf(marca);
+  const i = url.indexOf(RUTA_PUBLICA_IMAGENES);
   if (i === -1) return null;
-  const nombre = path.basename(url.slice(i + marca.length));
-  return path.join(CARPETA_UPLOADS, nombre);
+  const nombre = path.basename(url.slice(i + RUTA_PUBLICA_IMAGENES.length));
+  return path.join(CARPETA_IMAGENES, nombre);
 }
 
 // Borra del disco una imagen subida. No falla si ya no existe.

@@ -45,6 +45,7 @@ model Usuario {
   presets             Preset[]
   favoritos           Favorito[]
   passwordResetTokens PasswordResetToken[]
+  documentos          Documento[]
 
   // Relaciones de Better Auth
   sesiones Sesion[]
@@ -105,8 +106,9 @@ model Idioma {
   nombre   String  @map("nombre")
   activo   Boolean @default(true) @map("activo")
 
-  usuarios     Usuario[]
-  traducciones TraduccionProducto[]
+  usuarios              Usuario[]
+  traducciones          TraduccionProducto[]
+  traduccionesServicios TraduccionServicio[]
 
   @@map("idiomas")
 }
@@ -143,6 +145,10 @@ model Producto {
   // con la cotizacion cada vez que se actualiza) o "ARS" (el valor real es "precio" y no se mueve).
   monedaBase  String   @default("ARS") @map("moneda_base")
   precioUsd   Decimal? @map("precio_usd") @db.Decimal(10, 2)
+  // IVA: "precio" (y "precioUsd") se guardan tal como los cargo el admin, con o sin IVA.
+  // El neto y el final se calculan con la alicuota (src/utils/iva.ts). Lo que se cobra es el final.
+  ivaIncluido Boolean  @default(false) @map("iva_incluido")
+  alicuotaIva Decimal  @default(21) @map("alicuota_iva") @db.Decimal(4, 2) // 21 o 10.5
   stock       Int     @map("stock")
   imagenUrl   String? @map("imagen_url")
   // Baja logica: un producto con ventas no se borra, se desactiva y deja de
@@ -153,6 +159,7 @@ model Producto {
   marca     Marca     @relation(fields: [idMarca], references: [idMarca])
 
   componentePC  ComponentePC?
+  componentesPreset ComponentePreset[]
   itemsCarrito  ItemCarrito[]
   detallesVenta DetalleVenta[]
   favoritos     Favorito[]
@@ -173,8 +180,7 @@ model ComponentePC {
   producto       Producto       @relation(fields: [idProducto], references: [idProducto], onDelete: Cascade)
   tipoComponente TipoComponente @relation(fields: [idTipoComponente], references: [idTipoComponente])
 
-  valoresAtributo   ValorAtributo[]
-  componentesPreset ComponentePreset[]
+  valoresAtributo ValorAtributo[]
 
   @@map("componentes_pc")
 }
@@ -249,16 +255,20 @@ model Carrito {
   @@map("carritos")
 }
 
+// Un producto o un servicio del armador (exactamente uno: lo controla un CHECK en la migracion)
 model ItemCarrito {
-  idItemCarrito Int @id @default(autoincrement()) @map("id_item_carrito")
-  idCarrito     Int @map("id_carrito")
-  idProducto    Int @map("id_producto")
-  cantidad      Int @map("cantidad")
+  idItemCarrito Int  @id @default(autoincrement()) @map("id_item_carrito")
+  idCarrito     Int  @map("id_carrito")
+  idProducto    Int? @map("id_producto")
+  idServicio    Int? @map("id_servicio")
+  cantidad      Int  @map("cantidad")
 
-  carrito  Carrito  @relation(fields: [idCarrito], references: [idCarrito], onDelete: Cascade)
-  producto Producto @relation(fields: [idProducto], references: [idProducto])
+  carrito  Carrito   @relation(fields: [idCarrito], references: [idCarrito], onDelete: Cascade)
+  producto Producto? @relation(fields: [idProducto], references: [idProducto], onDelete: Restrict)
+  servicio Servicio? @relation(fields: [idServicio], references: [idServicio], onDelete: Restrict)
 
   @@unique([idCarrito, idProducto])
+  @@unique([idCarrito, idServicio])
   @@map("items_carrito")
 }
 
@@ -276,6 +286,8 @@ idPagoMp          String?  @unique @map("id_pago_mp")
   usuario        Usuario        @relation(fields: [idUsuario], references: [id])
   detalles       DetalleVenta[]
   factura        Factura?
+  // Factura en PDF (se genera sola al acreditarse el pago, ver src/utils/documentos.ts)
+  documento      Documento?
   notificaciones Notificacion[]
 
   @@map("ventas")
@@ -292,15 +304,19 @@ model Cotizacion {
   @@map("cotizaciones")
 }
 
+// Un producto o un servicio del armador (exactamente uno: lo controla un CHECK en la migracion)
 model DetalleVenta {
   idDetalleVenta Int     @id @default(autoincrement()) @map("id_detalle_venta")
   idVenta        Int     @map("id_venta")
-  idProducto     Int     @map("id_producto")
+  idProducto     Int?    @map("id_producto")
+  idServicio     Int?    @map("id_servicio")
   cantidad       Int     @map("cantidad")
-  precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2)
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2) // lo cobrado por unidad, con IVA
+  alicuotaIva    Decimal @default(21) @map("alicuota_iva") @db.Decimal(4, 2) // IVA incluido en precioUnitario
 
-  venta    Venta    @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
-  producto Producto @relation(fields: [idProducto], references: [idProducto])
+  venta    Venta     @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
+  producto Producto? @relation(fields: [idProducto], references: [idProducto], onDelete: Restrict)
+  servicio Servicio? @relation(fields: [idServicio], references: [idServicio], onDelete: Restrict)
 
   @@map("detalles_venta")
 }
@@ -328,6 +344,10 @@ model SolicitudServicio {
   conBackup       Boolean  @default(false) @map("con_backup") // solo con FORMATEO: backup antes de formatear
   conPastaTermica Boolean  @default(false) @map("con_pasta_termica") // solo con LIMPIEZA: cambio de pasta termica
   conSSD          Boolean  @default(false) @map("con_ssd") // solo con OPTIMIZACION: cambiar el disco duro por un SSD
+  // Precios de la tabla Servicio al crear la solicitud: [{ codigo, precio }] (precio null = a presupuestar).
+  // Es una estimacion: se abona en el local cuando el cliente trae el equipo y se confirma el servicio.
+  precios         Json     @default("[]") @map("precios")
+  precioEstimado  Decimal  @default(0) @map("precio_estimado") @db.Decimal(10, 2) // suma de los precios fijos
   // Que le sucede al equipo / comentarios. Obligatoria con REPARACION u OTRO.
   descripcion     String?  @map("descripcion")
   diagnosticoIA   String?  @map("diagnostico_ia")
@@ -391,7 +411,7 @@ model TipoNotificacion {
 }
 
 // FKs reales y opcionales al origen de la notificacion. Un CHECK en la
-// migracion obliga a que exactamente una de las dos (idVenta / idSolicitud)
+// migracion obliga a que exactamente una (idVenta / idSolicitud / idDocumento)
 // este cargada. Si aparece otro origen, se agrega su FK explicitamente.
 model Notificacion {
   idNotificacion     Int      @id @default(autoincrement()) @map("id_notificacion")
@@ -399,6 +419,7 @@ model Notificacion {
   idTipoNotificacion Int      @map("id_tipo_notificacion")
   idVenta            Int?     @map("id_venta")
   idSolicitud        Int?     @map("id_solicitud")
+  idDocumento        Int?     @map("id_documento")
   leida              Boolean  @default(false) @map("leida")
   fecha              DateTime @default(now()) @map("fecha")
 
@@ -406,8 +427,34 @@ model Notificacion {
   tipoNotificacion TipoNotificacion   @relation(fields: [idTipoNotificacion], references: [idTipoNotificacion])
   venta            Venta?             @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
   solicitud        SolicitudServicio? @relation(fields: [idSolicitud], references: [idSolicitud], onDelete: Cascade)
+  documento        Documento?         @relation(fields: [idDocumento], references: [idDocumento], onDelete: Cascade)
 
   @@map("notificaciones")
+}
+
+// Presupuestos y facturas en PDF. Los datos (items, cliente, total) quedan guardados
+// como estaban al emitirse, asi el PDF se puede volver a generar igual si falta el archivo.
+// Logica en src/utils/documentos.ts; formato del PDF en src/utils/pdf/plantillaDocumento.ts.
+model Documento {
+  idDocumento Int      @id @default(autoincrement()) @map("id_documento")
+  tipo        String   @map("tipo") // PRESUPUESTO | FACTURA
+  idUsuario   Int      @map("id_usuario")
+  idVenta     Int?     @unique @map("id_venta") // solo facturas: una por venta
+  origen      String   @map("origen") // CARRITO | PRESET | ARMADO (presupuestos) | VENTA (facturas)
+  numero      Int      @map("numero") // correlativo por tipo; se muestra como 0001-00000012
+  fecha       DateTime @default(now()) @map("fecha")
+  items       Json     @map("items") // [{ idProducto, nombre, cantidad, precioUnitario, subtotal }]
+  cliente     Json     @map("cliente") // { nombre, correo, direccion, telefono }
+  total       Decimal  @map("total") @db.Decimal(12, 2)
+  rutaArchivo String   @map("ruta_archivo") // relativa a la carpeta "documentos" del BE
+
+  usuario        Usuario        @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
+  venta          Venta?         @relation(fields: [idVenta], references: [idVenta], onDelete: Cascade)
+  notificaciones Notificacion[]
+
+  @@unique([tipo, numero])
+  @@index([idUsuario, tipo])
+  @@map("documentos")
 }
 
 model Preset {
@@ -422,18 +469,61 @@ model Preset {
   @@map("presets")
 }
 
-// Tabla intermedia muchos a muchos entre Preset y ComponentePC.
+// Tabla intermedia muchos a muchos entre Preset y Producto.
+// Apunta a Producto (no a ComponentePC) porque un armado tambien puede llevar
+// perifericos (monitor, mouse, teclado...), que no son componentes de PC.
 // cantidad permite, por ejemplo, 2 modulos de RAM iguales en un mismo preset.
 model ComponentePreset {
   idPreset   Int @map("id_preset")
   idProducto Int @map("id_producto")
   cantidad   Int @default(1) @map("cantidad")
 
-  preset       Preset       @relation(fields: [idPreset], references: [idPreset], onDelete: Cascade)
-  componentePC ComponentePC @relation(fields: [idProducto], references: [idProducto])
+  preset   Preset   @relation(fields: [idPreset], references: [idPreset], onDelete: Cascade)
+  producto Producto @relation(fields: [idProducto], references: [idProducto])
 
   @@id([idPreset, idProducto])
   @@map("componentes_preset")
+}
+
+// Servicios del local con su precio (en pesos), editables desde /admin/servicios.
+// No se crean desde la app: vienen de la migracion/seed; el admin solo cambia precio y activo.
+//  - grupo ARMADOR: armado de PC, instalacion de Windows... Se suman al armado y van al carrito.
+//  - grupo TIPO / EXTRA / SOFTWARE: servicio tecnico (src/utils/servicioTecnico.catalogo.ts).
+//    El codigo es el tipo (LIMPIEZA), el extra (EXTRA_BACKUP) o el programa (SOFTWARE_WIN10).
+//    Se abonan en el local; el precio es una estimacion que se informa al pedir el servicio.
+model Servicio {
+  idServicio  Int      @id @default(autoincrement()) @map("id_servicio")
+  codigo      String   @unique @map("codigo")
+  grupo       String   @map("grupo")
+  nombre      String   @map("nombre") // en espanol (el FE traduce los de servicio tecnico por codigo)
+  descripcion String   @default("") @map("descripcion")
+  precio      Decimal? @map("precio") @db.Decimal(10, 2) // null = a presupuestar (REPARACION, OTRO)
+  // IVA, como en Producto: "precio" se guarda tal como lo cargo el admin (con o sin IVA).
+  // alicuotaIva 0 = exento (no se le suma IVA). Ver src/utils/iva.ts
+  ivaIncluido Boolean  @default(false) @map("iva_incluido")
+  alicuotaIva Decimal  @default(21) @map("alicuota_iva") @db.Decimal(4, 2) // 21, 10.5 o 0
+  activo      Boolean  @default(true) @map("activo") // inactivo = no se ofrece
+  orden       Int      @default(0) @map("orden")
+
+  traducciones  TraduccionServicio[]
+  itemsCarrito  ItemCarrito[]
+  detallesVenta DetalleVenta[]
+
+  @@index([grupo])
+  @@map("servicios")
+}
+
+model TraduccionServicio {
+  idServicio           Int    @map("id_servicio")
+  idIdioma             Int    @map("id_idioma")
+  nombreTraducido      String @map("nombre_traducido")
+  descripcionTraducida String @map("descripcion_traducida")
+
+  servicio Servicio @relation(fields: [idServicio], references: [idServicio], onDelete: Cascade)
+  idioma   Idioma   @relation(fields: [idIdioma], references: [idIdioma])
+
+  @@id([idServicio, idIdioma])
+  @@map("traducciones_servicio")
 }
 
 model Favorito {

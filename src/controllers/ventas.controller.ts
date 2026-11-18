@@ -2,6 +2,8 @@ import { error } from "node:console";
 import { prisma } from "../utils/prisma";
 import { crearNotificacionCompra } from "../utils/notificaciones";
 import { cotizacionParaVenta } from "../utils/cotizacion";
+import { preciosProducto, preciosServicio } from "../utils/iva";
+import { emitirFacturaSinFallar } from "../utils/documentos";
 
 export async function procesarCompraAprobadaUnidad(
   idUsuario: number,
@@ -32,7 +34,9 @@ export async function procesarCompraAprobadaUnidad(
       );
     }
     //Creamos lo que va en detalleVenta
-    let totalVenta = Number(producto.precio) * cantidad;
+    // Se cobra con IVA
+    const { final, alicuotaIva } = preciosProducto(producto);
+    let totalVenta = Math.round(final * cantidad * 100) / 100;
 
     const nuevaVenta = await tx.venta.create({
       data: {
@@ -45,7 +49,8 @@ export async function procesarCompraAprobadaUnidad(
           create: {
             idProducto: idProducto,
             cantidad: cantidad,
-            precioUnitario: producto.precio,
+            precioUnitario: final,
+            alicuotaIva,
           },
         },
       },
@@ -58,6 +63,8 @@ export async function procesarCompraAprobadaUnidad(
     return nuevaVenta;
   });
   crearNotificacionCompra(idUsuario, resultadoVenta.idVenta);
+  // Pago acreditado: se genera la factura en PDF (una sola vez por venta)
+  emitirFacturaSinFallar(resultadoVenta.idVenta);
   return resultadoVenta;
 }
 
@@ -82,7 +89,7 @@ export async function procesarCompraAprobadaCarrito(
 
     const carrito = await tx.carrito.findUnique({
       where: { idUsuario },
-      include: { items: { include: { producto: true } } },
+      include: { items: { include: { producto: true, servicio: true } } },
     });
 
     if (!carrito || carrito.items.length === 0) {
@@ -91,14 +98,21 @@ export async function procesarCompraAprobadaCarrito(
 
     //Armamos lo que va en la tabla detalleVenta
     let totalVenta = 0;
+    // Cada item es un producto o un servicio del armador (armado de PC, instalacion de Windows...)
     const detallesParaInsertar = carrito.items.map((item) => {
-      const subtotal = Number(item.producto.precio) * item.cantidad;
+      // Lo que se cobra por unidad, con IVA
+      const { final, alicuotaIva } = item.producto
+        ? preciosProducto(item.producto)
+        : preciosServicio(item.servicio!);
+      const subtotal = Math.round(final * item.cantidad * 100) / 100;
       totalVenta += subtotal;
 
       return {
         idProducto: item.idProducto,
+        idServicio: item.idServicio,
         cantidad: item.cantidad,
-        precioUnitario: item.producto.precio,
+        precioUnitario: final,
+        alicuotaIva,
       };
     });
 
@@ -117,9 +131,10 @@ export async function procesarCompraAprobadaCarrito(
       },
     });
 
-    //Descontamos el stock de cada producto vendido
+    //Descontamos el stock de cada producto vendido (los servicios no tienen stock)
 
     for (const item of carrito.items) {
+      if (!item.idProducto) continue;
       await tx.producto.update({
         where: { idProducto: item.idProducto },
         data: { stock: { decrement: item.cantidad } },
@@ -134,5 +149,7 @@ export async function procesarCompraAprobadaCarrito(
     return nuevaVenta;
   });
   crearNotificacionCompra(idUsuario, resultadoVenta.idVenta);
+  // Pago acreditado: se genera la factura en PDF (una sola vez por venta)
+  emitirFacturaSinFallar(resultadoVenta.idVenta);
   return resultadoVenta;
 }

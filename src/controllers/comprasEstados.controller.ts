@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
+import { pagoAcreditado } from "../utils/documentos";
 
 const prisma = new PrismaClient();
 
@@ -32,6 +33,7 @@ export const obtenerHistorialCompras = async (req: Request, res: Response) => {
         detalles: {
           include: {
             producto: true,
+            servicio: true, // armado de PC, instalacion de Windows...
           },
         },
       },
@@ -49,7 +51,8 @@ export const obtenerHistorialCompras = async (req: Request, res: Response) => {
           detalle.idProducto ??
           detalle.producto?.idProducto ??
           detalle.producto?.idProducto,
-        nombre: detalle.producto?.nombre ?? "Producto sin nombre",
+        nombre: detalle.producto?.nombre ?? detalle.servicio?.nombre ?? "Producto sin nombre",
+        esServicio: detalle.idServicio !== null,
         cantidad: Number(detalle.cantidad),
         precioUnitario: Number(
           detalle.precioUnitario ?? detalle.producto?.precio ?? 0,
@@ -70,6 +73,8 @@ export const obtenerHistorialCompras = async (req: Request, res: Response) => {
         idPagoMp: venta.idPagoMp,
         cotizacionUsd: venta.cotizacionUsd ? Number(venta.cotizacionUsd) : null,
         cotizacionFecha: venta.cotizacionFecha?.toISOString() ?? null,
+        // El FE muestra "Descargar factura" solo con el pago acreditado
+        facturaDisponible: pagoAcreditado(venta),
         productos,
       };
     });

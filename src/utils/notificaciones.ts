@@ -40,3 +40,28 @@ export const crearNotificacionCompra = async (
     );
   }
 };
+
+// Aviso de "presupuesto/factura disponible". No corta el flujo si falla.
+export const crearNotificacionDocumento = async (documento: {
+  idDocumento: number;
+  idUsuario: number;
+  tipo: string;
+}) => {
+  const codigo = documento.tipo === "FACTURA" ? "FACTURA_DISPONIBLE" : "PRESUPUESTO_DISPONIBLE";
+  try {
+    const tipoNotificacion = await prisma.tipoNotificacion.findUnique({ where: { codigo } });
+    if (!tipoNotificacion) {
+      console.error(`No se generó la notificación: falta el tipo '${codigo}' en la BD.`);
+      return;
+    }
+    await prisma.notificacion.create({
+      data: {
+        idUsuario: documento.idUsuario,
+        idTipoNotificacion: tipoNotificacion.idTipoNotificacion,
+        idDocumento: documento.idDocumento,
+      },
+    });
+  } catch (error) {
+    console.error("Error al guardar la notificación del documento:", error);
+  }
+};

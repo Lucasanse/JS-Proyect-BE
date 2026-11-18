@@ -78,7 +78,9 @@ export async function listarMarcas(req: Request, res: Response<string[]>) {
 
   // Solo marcas con algun producto activo (de la categoria, si viene)
   const marcas = await prisma.marca.findMany({
-    where: { productos: { some: { idCategoria: categoria, activo: true } } },
+    where: {
+      productos: { some: { idCategoria: categoria, activo: true } },
+    },
     select: { nombre: true },
     orderBy: { nombre: "asc" },
   });
