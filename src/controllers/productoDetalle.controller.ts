@@ -67,18 +67,27 @@ export const obtenerProductoPorId = async (
     disponible: producto.stock > 0,
     categoria: {
       id: producto.categoria.idCategoria,
-      nombre: producto.categoria.nombre,
+      nombre:
+        codigoIdioma === "en" && producto.categoria.nombreEN
+          ? producto.categoria.nombreEN
+          : producto.categoria.nombre,
+      nombreEN: producto.categoria.nombreEN ?? null,
     },
   };
-
   if (producto.componentePC) {
     res.json({
       ...base,
       esComponentePC: true,
-      tipoComponente: producto.componentePC.tipoComponente.nombre,
+      tipoComponente:
+        codigoIdioma === "en" && producto.componentePC.tipoComponente.nombreEN
+          ? producto.componentePC.tipoComponente.nombreEN
+          : producto.componentePC.tipoComponente.nombre,
       wattsRequeridos: producto.componentePC.wattsRequeridos,
       atributos: producto.componentePC.valoresAtributo.map((va) => ({
-        nombre: va.atributo.nombre,
+        nombre:
+          codigoIdioma === "en" && va.atributo.nombreEN
+            ? va.atributo.nombreEN
+            : va.atributo.nombre,
         valor: va.valor,
         unidad: va.atributo.unidad,
       })),
