@@ -18,9 +18,10 @@ export type TipoServicio = (typeof TIPOS_SERVICIO)[number];
 export const TIPOS_EQUIPO = ["PC_FIJA", "NOTEBOOK", "IMPRESORA"] as const;
 export type TipoEquipo = (typeof TIPOS_EQUIPO)[number];
 
-// Solo para INSTALACION_SOFTWARE: lo que se puede instalar
-export const SOFTWARE = ["WIN10", "WIN11", "OFFICE", "WINRAR", "VLC"] as const;
-export type Software = (typeof SOFTWARE)[number];
+// Solo para INSTALACION_SOFTWARE: los programas que se pueden instalar estan en la tabla Servicio
+// (grupo SOFTWARE, codigo SOFTWARE_<programa>) y el admin puede agregar mas. En la solicitud se
+// guarda el programa sin el prefijo (WIN10, OFFICE...).
+export type Software = string;
 
 // Se instala un solo sistema operativo por equipo
 export const SISTEMAS_OPERATIVOS: readonly Software[] = ["WIN10", "WIN11"];

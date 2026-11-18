@@ -6,7 +6,7 @@ import { apiRouter } from "./routes";
 import { auth } from "./lib/auth";
 import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
 import { iniciarCronCotizacion } from "./utils/cotizacion";
-import { CARPETA_UPLOADS } from "./middlewares/subirImagen";
+import { CARPETA_IMAGENES } from "./middlewares/subirImagen";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -34,8 +34,9 @@ if (process.env.FRONTEND_URL) {
   });
 }
 
-// Imagenes de productos subidas por el admin: http://localhost:3000/uploads/xxx.webp
-app.use("/uploads", express.static(CARPETA_UPLOADS, { maxAge: "7d" }));
+// Imagenes de productos subidas por el admin: http://localhost:3000/uploads/imagenes/xxx.webp
+// Solo se sirve la carpeta de imagenes: uploads/documentos (facturas y presupuestos) no es publica.
+app.use("/uploads/imagenes", express.static(CARPETA_IMAGENES, { maxAge: "7d" }));
 
 app.use("/api", apiRouter);
 

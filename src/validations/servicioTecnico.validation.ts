@@ -2,7 +2,6 @@ import { z } from "zod";
 import { ESTADOS_SOLICITUD } from "../utils/servicioTecnico.estados";
 import {
   SISTEMAS_OPERATIVOS,
-  SOFTWARE,
   TIPOS_EQUIPO,
   TIPOS_SERVICIO,
   type TipoServicio,
@@ -19,9 +18,15 @@ const MIN_DESCRIPCION = 10;
 const MAX_DESCRIPCION = 2000;
 
 const softwareSchema = z
-  .array(z.enum(SOFTWARE, { error: `Software no válido. Valores: ${SOFTWARE.join(", ")}` }), {
-    error: "Elegí qué programas instalar",
-  })
+  // Que exista y este habilitado se controla contra la tabla Servicio al crear la solicitud
+  .array(
+    z
+      .string({ error: "Programa no válido" })
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z0-9_]{1,40}$/, "Programa no válido"),
+    { error: "Elegí qué programas instalar" },
+  )
   .refine((lista) => new Set(lista).size === lista.length, { message: "Hay programas repetidos" })
   .refine((lista) => lista.filter((s) => SISTEMAS_OPERATIVOS.includes(s)).length <= 1, {
     message: "Elegí un solo sistema operativo (Windows 10 o Windows 11)",

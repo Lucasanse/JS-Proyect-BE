@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../utils/prisma";
 import { AppError } from "../utils/AppError";
 import type { Paginado, ProductoAdmin } from "../utils/catalogo.types";
-import { borrarImagenLocal } from "../middlewares/subirImagen";
+import { RUTA_PUBLICA_IMAGENES, borrarImagenLocal } from "../middlewares/subirImagen";
 import {
   estadoSchema,
   idParamSchema,
@@ -46,6 +46,8 @@ function mapearAdmin(p: ProductoConAdmin): ProductoAdmin {
     precio: p.precio.toNumber(),
     monedaBase: p.monedaBase === "USD" ? "USD" : "ARS",
     precioUsd: p.precioUsd ? p.precioUsd.toNumber() : null,
+    ivaIncluido: p.ivaIncluido,
+    alicuotaIva: p.alicuotaIva.toNumber(),
     stock: p.stock,
     imagenUrl: p.imagenUrl,
     activo: p.activo,
@@ -303,5 +305,5 @@ export async function cambiarEstadoProducto(req: Request, res: Response<Producto
 export async function subirImagenProducto(req: Request, res: Response<{ url: string }>) {
   if (!req.file) throw new AppError(400, "No se envió ninguna imagen");
   const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get("host")}`;
-  res.status(201).json({ url: `${base}/uploads/${req.file.filename}` });
+  res.status(201).json({ url: `${base}${RUTA_PUBLICA_IMAGENES}${req.file.filename}` });
 }

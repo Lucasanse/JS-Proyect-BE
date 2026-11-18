@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { preciosIva } from "../utils/producto.mapper";
 import { prisma } from "../utils/prisma";
 import { ProductoDetalle } from "../utils/catalogo.types";
 
@@ -60,7 +61,7 @@ export const obtenerProductoPorId = async (
       ? traduccion.descripcionTraducida
       : (producto.descripcion ?? ""),
     marca: producto.marca.nombre,
-    precio: Number(producto.precio),
+    ...preciosIva(producto),
     stock: producto.stock,
     imagenUrl: producto.imagenUrl,
     disponible: producto.stock > 0,
