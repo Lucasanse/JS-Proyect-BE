@@ -22,10 +22,7 @@ import {
 } from "../controllers/checkout.controller";
 import { recibidorDeWebHookMP } from "../controllers/webhooks.controller";
 import { obtenerHistorialCompras } from "../controllers/comprasEstados.controller";
-import {
-  marcarComoLeida,
-  obtenerNotificaciones,
-} from "../controllers/notificaciones.controller";
+import * as notificaciones from "../controllers/notificaciones.controller";
 import {
   cambiarEstadoVentaAdmin,
   listarVentasAdmin,
@@ -98,13 +95,13 @@ apiRouter.get("/quotes", requireAuth, documentos.listarPresupuestos);
 apiRouter.get("/quotes/:id/download", requireAuth, documentos.descargarPresupuesto);
 apiRouter.get("/orders/:id/invoice", requireAuth, documentos.descargarFactura);
 
-//Notificaciones
-apiRouter.patch(
-  "/notificaciones/:idNotificacion/leida",
-  requireAuth,
-  marcarComoLeida,
-);
-apiRouter.get("/notificaciones/:idUsuario", requireAuth, obtenerNotificaciones);
+// Notificaciones (cada usuario solo ve y modifica las suyas)
+apiRouter.get("/notifications", requireAuth, notificaciones.listarNotificaciones);
+apiRouter.get("/notifications/unread-count", requireAuth, notificaciones.contarNotificacionesNoLeidas);
+// Tiempo real por SSE (EventSource con cookies de sesion)
+apiRouter.get("/notifications/stream", requireAuth, notificaciones.streamNotificaciones);
+apiRouter.patch("/notifications/read-all", requireAuth, notificaciones.marcarTodasComoLeidas);
+apiRouter.patch("/notifications/:id/read", requireAuth, notificaciones.marcarComoLeida);
 
 // Administracion (solo rol ADMIN: sin sesion -> 401, otro rol -> 403)
 const adminRouter = Router();
@@ -162,5 +159,8 @@ adminRouter.patch("/servicios/:id", adminServicios.actualizarServicio);
 adminRouter.get("/usuarios", adminUsuarios.listarUsuarios);
 adminRouter.get("/usuarios/:id", adminUsuarios.obtenerUsuario);
 adminRouter.patch("/usuarios/:id/habilitado", adminUsuarios.cambiarHabilitado);
+
+// Novedades generales para todos los usuarios (o los indicados)
+adminRouter.post("/notifications", notificaciones.enviarNovedad);
 
 apiRouter.use("/admin", adminRouter);

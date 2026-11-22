@@ -21,6 +21,7 @@ import {
   listarSolicitudesQuerySchema,
   respuestaSchema,
 } from "../validations/servicioTecnico.validation";
+import { crearNotificacionEstadoSolicitud } from "../utils/notificaciones";
 
 // Todas estas rutas pasan por requireAuth + requireAdmin (ver routes/index.ts).
 
@@ -138,6 +139,9 @@ export async function cambiarEstadoSolicitud(req: Request, res: Response<Solicit
       await tx.respuestaSolicitud.create({ data: { idSolicitud: id, idUsuario: idUsuarioDe(req), mensaje } });
     }
   });
+
+  // Aviso al cliente (no corta la respuesta si falla)
+  await crearNotificacionEstadoSolicitud(solicitud.idUsuario, id, estado);
 
   res.json(mapearDetalleSolicitud(await buscarSolicitud(id), true));
 }
