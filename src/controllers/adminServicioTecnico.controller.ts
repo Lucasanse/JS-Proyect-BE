@@ -21,7 +21,7 @@ import {
   listarSolicitudesQuerySchema,
   respuestaSchema,
 } from "../validations/servicioTecnico.validation";
-import { crearNotificacionEstadoSolicitud } from "../utils/notificaciones";
+import { crearNotificacionEstadoSolicitud, crearNotificacionRespuestaSolicitud } from "../utils/notificaciones";
 
 // Todas estas rutas pasan por requireAuth + requireAdmin (ver routes/index.ts).
 
@@ -108,6 +108,9 @@ export async function responderSolicitud(req: Request, res: Response<SolicitudDe
     // Marca la solicitud como actualizada (el cliente ve primero las que tienen novedades)
     prisma.solicitudServicio.update({ where: { idSolicitud: id }, data: { actualizadoEn: new Date() } }),
   ]);
+
+  // Aviso al cliente de la respuesta (no corta la respuesta si falla)
+  await crearNotificacionRespuestaSolicitud(solicitud.idUsuario, id, mensaje);
 
   res.status(201).json(mapearDetalleSolicitud(await buscarSolicitud(id), true));
 }

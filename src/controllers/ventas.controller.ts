@@ -1,9 +1,23 @@
 import { error } from "node:console";
 import { prisma } from "../utils/prisma";
-import { crearNotificacionCompra } from "../utils/notificaciones";
+import {
+  crearNotificacionCompra,
+  notificarAdminsVentaNueva,
+  notificarPresetsAfectados,
+} from "../utils/notificaciones";
 import { cotizacionParaVenta } from "../utils/cotizacion";
 import { preciosProducto, preciosServicio } from "../utils/iva";
 import { emitirFacturaSinFallar } from "../utils/documentos";
+
+// Avisa a los admins de la compra y a los usuarios cuyos armados se quedaron sin stock por ella
+async function avisosVentaNueva(idVenta: number) {
+  await notificarAdminsVentaNueva(idVenta);
+  const agotados = await prisma.producto.findMany({
+    where: { stock: { lte: 0 }, detallesVenta: { some: { idVenta } } },
+    select: { idProducto: true },
+  });
+  await notificarPresetsAfectados(agotados.map((p) => p.idProducto), "SIN_STOCK");
+}
 
 export async function procesarCompraAprobadaUnidad(
   idUsuario: number,
@@ -11,6 +25,8 @@ export async function procesarCompraAprobadaUnidad(
   idProducto: number,
   cantidad: number,
 ) {
+  // Solo una venta nueva avisa a los admins y a los armados (MP repite el aviso del mismo pago)
+  let esNueva = false;
   const resultadoVenta = await prisma.$transaction(async (tx) => {
     //Esto lo hacemos pq MP tira muchos avisos y esto hace que quede limpio y sin que se duplique
     const ventaExistente = await tx.venta.findUnique({
@@ -60,9 +76,11 @@ export async function procesarCompraAprobadaUnidad(
       data: { stock: { decrement: cantidad } },
     });
 
+    esNueva = true;
     return nuevaVenta;
   });
   crearNotificacionCompra(idUsuario, resultadoVenta.idVenta);
+  if (esNueva) avisosVentaNueva(resultadoVenta.idVenta).catch((e) => console.error("Error en los avisos de la venta:", e));
   // Pago acreditado: se genera la factura en PDF (una sola vez por venta)
   emitirFacturaSinFallar(resultadoVenta.idVenta);
   return resultadoVenta;
@@ -72,6 +90,8 @@ export async function procesarCompraAprobadaCarrito(
   idUsuario: number,
   idPagoMP: string,
 ) {
+  // Solo una venta nueva avisa a los admins y a los armados (MP repite el aviso del mismo pago)
+  let esNueva = false;
   const resultadoVenta = await prisma.$transaction(async (tx) => {
     //Esto lo hacemos pq MP tira muchos avisos y esto hace que quede limpio y sin que se duplique
     const ventaExistente = await tx.venta.findUnique({
@@ -146,9 +166,11 @@ export async function procesarCompraAprobadaCarrito(
       where: { idCarrito: carrito.idCarrito },
     });
 
+    esNueva = true;
     return nuevaVenta;
   });
   crearNotificacionCompra(idUsuario, resultadoVenta.idVenta);
+  if (esNueva) avisosVentaNueva(resultadoVenta.idVenta).catch((e) => console.error("Error en los avisos de la venta:", e));
   // Pago acreditado: se genera la factura en PDF (una sola vez por venta)
   emitirFacturaSinFallar(resultadoVenta.idVenta);
   return resultadoVenta;

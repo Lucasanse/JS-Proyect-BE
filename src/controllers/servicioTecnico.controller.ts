@@ -13,6 +13,7 @@ import type { SolicitudDetalle, SolicitudResumen } from "../utils/servicioTecnic
 import { crearSolicitudSchema, idSolicitudParamSchema } from "../validations/servicioTecnico.validation";
 import { codigosDeSolicitud, preciosDeSolicitud, type GrupoServicio } from "../utils/servicios";
 import { preciosServicio } from "../utils/iva";
+import { notificarAdminsSolicitudNueva } from "../utils/notificaciones";
 
 // Rutas del cliente: todas pasan por requireAuth y cada usuario solo ve sus solicitudes.
 // Better Auth devuelve el id como string; en la base es Int.
@@ -67,6 +68,9 @@ export async function crearSolicitud(req: Request, res: Response<SolicitudDetall
     },
     include: includeDetalleSolicitud,
   });
+
+  // Aviso a los administradores (no corta la respuesta si falla)
+  await notificarAdminsSolicitudNueva(solicitud.idSolicitud, req.usuario!.name);
 
   res.status(201).json(mapearDetalleSolicitud(solicitud, false));
 }

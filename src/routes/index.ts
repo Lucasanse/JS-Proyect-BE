@@ -85,7 +85,8 @@ apiRouter.post(
 //Agregar el auth cuando se termine con las pruebas.
 apiRouter.post("/checkout/carrito", requireAuth, crearOrdenCarrito);
 apiRouter.post("/checkout/unidad", requireAuth, crearOrdenPorUnidad);
-apiRouter.get("/compras/:idUsuario", obtenerHistorialCompras);
+// Cada usuario ve solo sus compras (un admin puede ver las de cualquiera)
+apiRouter.get("/compras/:idUsuario", requireAuth, obtenerHistorialCompras);
 
 apiRouter.post("/webhooks/mercadopago", recibidorDeWebHookMP);
 

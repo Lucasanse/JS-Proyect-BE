@@ -64,8 +64,16 @@ function referenciaDe(n: NotificacionCompleta): ReferenciaNotificacion | null {
   // Los presets no tienen FK en la notificacion: el id va en datos
   const idPreset = (n.datos as Record<string, unknown> | null)?.idPreset;
   if (typeof idPreset === "number") return { tipo: "PRESET", id: idPreset, enlace: "/presets" };
-  if (n.idVenta) return { tipo: "VENTA", id: n.idVenta, enlace: `/misCompras#venta-${n.idVenta}` };
-  if (n.idSolicitud) return { tipo: "SOLICITUD", id: n.idSolicitud, enlace: `/servicio-tecnico/${n.idSolicitud}` };
+  // Las de administradores (ADMIN_...) llevan al panel de admin
+  const paraAdmin = n.tipoNotificacion.codigo.startsWith("ADMIN_");
+  if (n.idVenta) {
+    const enlace = paraAdmin ? `/admin/ventas/${n.idVenta}` : `/misCompras#venta-${n.idVenta}`;
+    return { tipo: "VENTA", id: n.idVenta, enlace };
+  }
+  if (n.idSolicitud) {
+    const enlace = paraAdmin ? `/admin/servicio-tecnico/${n.idSolicitud}` : `/servicio-tecnico/${n.idSolicitud}`;
+    return { tipo: "SOLICITUD", id: n.idSolicitud, enlace };
+  }
   if (n.documento) {
     const { idDocumento, tipo, idVenta } = n.documento;
     const enlace = tipo === "FACTURA" && idVenta ? `/misCompras#venta-${idVenta}` : "/mis-presupuestos";
@@ -80,11 +88,14 @@ export function formatearNotificacion(n: NotificacionCompleta, lang: IdiomaNotif
   const estado = typeof datos.estado === "string" ? datos.estado : undefined;
 
   const valores: Record<string, string | undefined> = {
+    // Lo guardado en datos (producto, cliente, respuesta...) y despues lo calculado
+    ...Object.fromEntries(Object.entries(datos).map(([clave, valor]) => [clave, String(valor)])),
     idVenta: String(n.venta?.idVenta ?? n.documento?.idVenta ?? ""),
-    total: n.venta?.total.toString(),
+    total: n.venta
+      ? `$ ${Number(n.venta.total).toLocaleString(lang === "en" ? "en-US" : "es-AR", { maximumFractionDigits: 2 })}`
+      : undefined,
     idSolicitud: n.solicitud ? String(n.solicitud.idSolicitud) : undefined,
     numero: n.documento ? formatearNumero(n.documento.numero) : undefined,
-    nombre: typeof datos.nombre === "string" ? datos.nombre : undefined,
     estado: estado ? (NOMBRES_ESTADO[lang][estado] ?? estado) : undefined,
   };
 
@@ -232,6 +243,71 @@ export const crearNotificacionEstadoVenta = (idUsuario: number, idVenta: number,
 // El usuario guarda un armado (preset) del armador de PC
 export const crearNotificacionPreset = (idUsuario: number, idPreset: number, nombre: string) =>
   createNotification({ idUsuario, codigo: "PRESET_CREADO", datos: { idPreset, nombre } });
+
+// El admin responde una solicitud de servicio tecnico (sin cambiarle el estado)
+const MAX_RESPUESTA_EN_AVISO = 140;
+export const crearNotificacionRespuestaSolicitud = (idUsuario: number, idSolicitud: number, mensaje: string) =>
+  createNotification({
+    idUsuario,
+    codigo: "SOLICITUD_RESPUESTA",
+    referencia: { tipo: "SOLICITUD", id: idSolicitud },
+    datos: {
+      respuesta:
+        mensaje.length > MAX_RESPUESTA_EN_AVISO ? `${mensaje.slice(0, MAX_RESPUESTA_EN_AVISO).trimEnd()}…` : mensaje,
+    },
+  });
+
+// --- Avisos para los administradores ---
+
+async function notificarAdmins(
+  codigo: string,
+  referencia: NonNullable<NuevaNotificacion["referencia"]>,
+  datos?: NuevaNotificacion["datos"],
+) {
+  try {
+    const admins = await prisma.usuario.findMany({ where: { rol: "ADMIN", habilitado: true }, select: { id: true } });
+    for (const { id } of admins) {
+      await createNotification({ idUsuario: id, codigo, referencia, datos, unaPorReferencia: true });
+    }
+  } catch (error) {
+    console.error(`No se pudo avisar a los administradores (${codigo}):`, error);
+  }
+}
+
+// Compra pagada (webhook de Mercado Pago)
+export const notificarAdminsVentaNueva = (idVenta: number) =>
+  notificarAdmins("ADMIN_VENTA_NUEVA", { tipo: "VENTA", id: idVenta });
+
+// Solicitud de servicio tecnico nueva
+export const notificarAdminsSolicitudNueva = (idSolicitud: number, cliente: string) =>
+  notificarAdmins("ADMIN_SOLICITUD_NUEVA", { tipo: "SOLICITUD", id: idSolicitud }, { cliente });
+
+// --- Armados guardados con productos que dejan de estar disponibles ---
+
+// Avisa a cada usuario que tiene alguno de estos productos en un armado guardado:
+// SIN_STOCK cuando el stock llega a 0, BAJA cuando el admin lo desactiva.
+// Se llama solo en el cambio (de con stock a sin stock, de activo a inactivo), asi no se repite.
+export async function notificarPresetsAfectados(idProductos: number[], motivo: "SIN_STOCK" | "BAJA") {
+  if (idProductos.length === 0) return;
+  try {
+    const componentes = await prisma.componentePreset.findMany({
+      where: { idProducto: { in: idProductos } },
+      select: {
+        preset: { select: { idPreset: true, nombre: true, idUsuario: true } },
+        producto: { select: { nombre: true } },
+      },
+    });
+    for (const { preset, producto } of componentes) {
+      await createNotification({
+        idUsuario: preset.idUsuario,
+        codigo: motivo === "SIN_STOCK" ? "PRESET_SIN_STOCK" : "PRESET_PRODUCTO_BAJA",
+        datos: { idPreset: preset.idPreset, nombre: preset.nombre, producto: producto.nombre },
+      });
+    }
+  } catch (error) {
+    console.error("No se pudo avisar de los armados afectados:", error);
+  }
+}
 
 // Novedades generales: a los usuarios indicados o, si no se indican, a todos los habilitados.
 // Devuelve cuantas se crearon.
