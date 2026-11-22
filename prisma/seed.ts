@@ -1890,6 +1890,41 @@ const tiposNotificacion = [
     plantillaMensajeEN: 'You saved the build "{nombre}". You can find it in My PC builds.',
   },
   {
+    codigo: "SOLICITUD_RESPUESTA",
+    plantillaTitulo: "Nueva respuesta del servicio técnico",
+    plantillaTituloEN: "New reply from technical support",
+    plantillaMensaje: "Te respondimos en tu solicitud #{idSolicitud}: \"{respuesta}\"",
+    plantillaMensajeEN: "We replied to your request #{idSolicitud}: \"{respuesta}\"",
+  },
+  {
+    codigo: "ADMIN_VENTA_NUEVA",
+    plantillaTitulo: "Nueva compra",
+    plantillaTituloEN: "New order",
+    plantillaMensaje: "Se acreditó la compra #{idVenta} por {total}.",
+    plantillaMensajeEN: "Order #{idVenta} was paid ({total}).",
+  },
+  {
+    codigo: "ADMIN_SOLICITUD_NUEVA",
+    plantillaTitulo: "Nueva solicitud de servicio técnico",
+    plantillaTituloEN: "New service request",
+    plantillaMensaje: "{cliente} envió la solicitud #{idSolicitud}.",
+    plantillaMensajeEN: "{cliente} sent service request #{idSolicitud}.",
+  },
+  {
+    codigo: "PRESET_SIN_STOCK",
+    plantillaTitulo: "Producto sin stock en tu armado",
+    plantillaTituloEN: "Out of stock item in your build",
+    plantillaMensaje: "\"{producto}\" de tu armado \"{nombre}\" se quedó sin stock.",
+    plantillaMensajeEN: "\"{producto}\" in your build \"{nombre}\" is out of stock.",
+  },
+  {
+    codigo: "PRESET_PRODUCTO_BAJA",
+    plantillaTitulo: "Producto no disponible en tu armado",
+    plantillaTituloEN: "Unavailable item in your build",
+    plantillaMensaje: "\"{producto}\" de tu armado \"{nombre}\" ya no está disponible.",
+    plantillaMensajeEN: "\"{producto}\" in your build \"{nombre}\" is no longer available.",
+  },
+  {
     // Novedades generales: el titulo y el mensaje los escribe el admin
     codigo: "NOVEDAD",
     plantillaTitulo: "Novedades",
