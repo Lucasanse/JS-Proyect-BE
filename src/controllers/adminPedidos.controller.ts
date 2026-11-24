@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { PrismaClient, Prisma } from "@prisma/client";
+import { crearNotificacionEstadoVenta } from "../utils/notificaciones";
 
 const prisma = new PrismaClient();
 
@@ -44,6 +45,11 @@ export const cambiarEstadoVentaAdmin = async (req: Request, res: Response) => {
       where: { idVenta },
       data: { estado },
     });
+
+    // Aviso al cliente si el estado realmente cambio (no corta la respuesta si falla)
+    if (ventaExistente.estado !== estado) {
+      await crearNotificacionEstadoVenta(ventaExistente.idUsuario, idVenta, estado);
+    }
 
     return res.status(200).json({
       mensaje: "Estado actualizado exitosamente",

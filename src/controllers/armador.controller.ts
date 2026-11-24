@@ -33,6 +33,7 @@ import {
   langQuerySchema,
   seleccionBodySchema,
 } from "../validations/armador.validation";
+import { crearNotificacionPreset } from "../utils/notificaciones";
 
 // Las rutas de carrito y presets pasan por requireAuth. Better Auth devuelve el id como string.
 const idUsuarioDe = (req: Request) => Number(req.usuario!.id);
@@ -329,6 +330,7 @@ export async function guardarPreset(req: Request, res: Response) {
       },
     },
   });
+  await crearNotificacionPreset(preset.idUsuario, preset.idPreset, preset.nombre);
 
   const respuesta: PresetArmado = {
     id: preset.idPreset,

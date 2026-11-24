@@ -1828,33 +1828,109 @@ const alicuotasPorCategoria: Partial<Record<NombreCategoria, number>> = {
 const tiposNotificacion = [
   {
     codigo: "VENTA_CONFIRMADA",
+    plantillaTitulo: "Pago acreditado",
+    plantillaTituloEN: "Payment received",
     plantillaMensaje: "Tu compra #{idVenta} fue confirmada.",
     plantillaMensajeEN: "Your purchase #{idVenta} has been confirmed.",
   },
   {
     codigo: "VENTA_ENVIADA",
+    plantillaTitulo: "Compra enviada",
+    plantillaTituloEN: "Order shipped",
     plantillaMensaje: "Tu compra #{idVenta} fue enviada.",
     plantillaMensajeEN: "Your purchase #{idVenta} has been shipped.",
   },
   {
+    codigo: "VENTA_ESTADO",
+    plantillaTitulo: "Tu compra se actualizó",
+    plantillaTituloEN: "Order updated",
+    plantillaMensaje: 'Tu compra #{idVenta} pasó a "{estado}".',
+    plantillaMensajeEN: 'Your purchase #{idVenta} is now "{estado}".',
+  },
+  {
     codigo: "SOLICITUD_RECIBIDA",
+    plantillaTitulo: "Solicitud recibida",
+    plantillaTituloEN: "Request received",
     plantillaMensaje: "Recibimos tu solicitud de servicio #{idSolicitud}.",
     plantillaMensajeEN: "We received your service request #{idSolicitud}.",
   },
   {
     codigo: "SOLICITUD_DIAGNOSTICADA",
+    plantillaTitulo: "Diagnóstico listo",
+    plantillaTituloEN: "Diagnosis ready",
     plantillaMensaje: "Tu solicitud #{idSolicitud} ya tiene diagnostico.",
     plantillaMensajeEN: "Your request #{idSolicitud} has been diagnosed.",
   },
   {
     codigo: "PRESUPUESTO_DISPONIBLE",
+    plantillaTitulo: "Presupuesto disponible",
+    plantillaTituloEN: "Quote available",
     plantillaMensaje: "Tu presupuesto N° {numero} está listo para descargar.",
     plantillaMensajeEN: "Your quote No. {numero} is ready to download.",
   },
   {
     codigo: "FACTURA_DISPONIBLE",
+    plantillaTitulo: "Factura disponible",
+    plantillaTituloEN: "Invoice available",
     plantillaMensaje: "La factura N° {numero} de tu compra #{idVenta} está disponible.",
     plantillaMensajeEN: "Invoice No. {numero} for your purchase #{idVenta} is available.",
+  },
+  {
+    codigo: "SOLICITUD_ESTADO",
+    plantillaTitulo: "Servicio técnico actualizado",
+    plantillaTituloEN: "Service request updated",
+    plantillaMensaje: 'Tu solicitud de servicio técnico #{idSolicitud} pasó a "{estado}".',
+    plantillaMensajeEN: 'Your service request #{idSolicitud} is now "{estado}".',
+  },
+  {
+    codigo: "PRESET_CREADO",
+    plantillaTitulo: "Armado guardado",
+    plantillaTituloEN: "Build saved",
+    plantillaMensaje: 'Guardaste el armado "{nombre}". Lo encontrás en Mis armados PC.',
+    plantillaMensajeEN: 'You saved the build "{nombre}". You can find it in My PC builds.',
+  },
+  {
+    codigo: "SOLICITUD_RESPUESTA",
+    plantillaTitulo: "Nueva respuesta del servicio técnico",
+    plantillaTituloEN: "New reply from technical support",
+    plantillaMensaje: "Te respondimos en tu solicitud #{idSolicitud}: \"{respuesta}\"",
+    plantillaMensajeEN: "We replied to your request #{idSolicitud}: \"{respuesta}\"",
+  },
+  {
+    codigo: "ADMIN_VENTA_NUEVA",
+    plantillaTitulo: "Nueva compra",
+    plantillaTituloEN: "New order",
+    plantillaMensaje: "Se acreditó la compra #{idVenta} por {total}.",
+    plantillaMensajeEN: "Order #{idVenta} was paid ({total}).",
+  },
+  {
+    codigo: "ADMIN_SOLICITUD_NUEVA",
+    plantillaTitulo: "Nueva solicitud de servicio técnico",
+    plantillaTituloEN: "New service request",
+    plantillaMensaje: "{cliente} envió la solicitud #{idSolicitud}.",
+    plantillaMensajeEN: "{cliente} sent service request #{idSolicitud}.",
+  },
+  {
+    codigo: "PRESET_SIN_STOCK",
+    plantillaTitulo: "Producto sin stock en tu armado",
+    plantillaTituloEN: "Out of stock item in your build",
+    plantillaMensaje: "\"{producto}\" de tu armado \"{nombre}\" se quedó sin stock.",
+    plantillaMensajeEN: "\"{producto}\" in your build \"{nombre}\" is out of stock.",
+  },
+  {
+    codigo: "PRESET_PRODUCTO_BAJA",
+    plantillaTitulo: "Producto no disponible en tu armado",
+    plantillaTituloEN: "Unavailable item in your build",
+    plantillaMensaje: "\"{producto}\" de tu armado \"{nombre}\" ya no está disponible.",
+    plantillaMensajeEN: "\"{producto}\" in your build \"{nombre}\" is no longer available.",
+  },
+  {
+    // Novedades generales: el titulo y el mensaje los escribe el admin
+    codigo: "NOVEDAD",
+    plantillaTitulo: "Novedades",
+    plantillaTituloEN: "News",
+    plantillaMensaje: "{mensaje}",
+    plantillaMensajeEN: "{mensaje}",
   },
 ];
 
@@ -1934,6 +2010,19 @@ async function main() {
   );
   console.log(`Admin   -> ${admin.correo} / admin`);
   console.log(`Usuario -> ${cliente.correo} / user`);
+
+  // Mas clientes de prueba (todos con contraseña "cliente"); uno en ingles y uno deshabilitado
+  const otrosClientes: DatosUsuario[] = [
+    { nombreCompleto: "María González", correo: "maria@cliente.com", direccion: "Av. Argentina 450", telefono: "2994102233" },
+    { nombreCompleto: "Juan Pérez", correo: "juan@cliente.com", direccion: "Belgrano 1220", telefono: "2994567788" },
+    { nombreCompleto: "Lucía Fernández", correo: "lucia@cliente.com", direccion: "Mitre 85", telefono: "2995013344" },
+    { nombreCompleto: "John Smith", correo: "john@cliente.com", direccion: "Roca 760", telefono: "2994889900", idIdioma: idsIdioma.en },
+    { nombreCompleto: "Carlos Ramírez", correo: "carlos@cliente.com", direccion: "San Martín 300", telefono: "2994221100", habilitado: false },
+  ].map((u) => ({ correoVerificado: true, rol: "CLIENTE", idIdioma: idsIdioma.es, ...u }));
+  for (const datos of otrosClientes) {
+    await upsertUsuario(datos, "cliente");
+  }
+  console.log(`Clientes de prueba: ${otrosClientes.map((u) => u.correo).join(", ")} / cliente`);
 
   // Categorias, tipos de componente y atributos: se sincronizan SIEMPRE (upsert),
   // asi una base que ya tiene productos tambien recibe las categorias y atributos nuevos.
@@ -2154,7 +2243,12 @@ async function main() {
     await prisma.tipoNotificacion.upsert({
       where: { codigo: notif.codigo },
       create: notif,
-      update: { plantillaMensajeEN: notif.plantillaMensajeEN },
+      update: {
+        plantillaMensaje: notif.plantillaMensaje,
+        plantillaMensajeEN: notif.plantillaMensajeEN,
+        plantillaTitulo: notif.plantillaTitulo,
+        plantillaTituloEN: notif.plantillaTituloEN,
+      },
     });
     notificacionesCargadas++;
   }
