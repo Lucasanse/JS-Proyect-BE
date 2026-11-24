@@ -31,7 +31,11 @@ import {
   listarVentasAdmin,
   obtenerVentaPorIdAdmin,
 } from "../controllers/adminPedidos.controller";
-import { obtenerFavoritosPorId } from "../controllers/favoritos.controller";
+import {
+  agregarFavorito,
+  eliminarFavorito,
+  obtenerFavoritosPorId,
+} from "../controllers/favoritos.controller";
 
 export const apiRouter = Router();
 
@@ -133,7 +137,17 @@ apiRouter.get("/notificaciones/:idUsuario", requireAuth, obtenerNotificaciones);
 //Favoritos
 
 //apiRouter.get("/notificaciones/:idUsuario", requireAuth, obtenerNotificaciones);
-apiRouter.get("/favoritos/:idUsuario", obtenerFavoritosPorId);
+apiRouter.get("/favoritos/:idUsuario", requireAuth, obtenerFavoritosPorId);
+apiRouter.post(
+  "/favoritos/:idUsuario/:idProducto",
+  requireAuth,
+  agregarFavorito,
+);
+apiRouter.delete(
+  "/favoritos/:idUsuario/:idProducto",
+  requireAuth,
+  eliminarFavorito,
+);
 
 // Administracion (solo rol ADMIN: sin sesion -> 401, otro rol -> 403)
 const adminRouter = Router();
