@@ -22,10 +22,7 @@ import {
 } from "../controllers/checkout.controller";
 import { recibidorDeWebHookMP } from "../controllers/webhooks.controller";
 import { obtenerHistorialCompras } from "../controllers/comprasEstados.controller";
-import {
-  marcarComoLeida,
-  obtenerNotificaciones,
-} from "../controllers/notificaciones.controller";
+import * as notificaciones from "../controllers/notificaciones.controller";
 import {
   cambiarEstadoVentaAdmin,
   listarVentasAdmin,
@@ -112,7 +109,8 @@ apiRouter.post(
 //Agregar el auth cuando se termine con las pruebas.
 apiRouter.post("/checkout/carrito", requireAuth, crearOrdenCarrito);
 apiRouter.post("/checkout/unidad", requireAuth, crearOrdenPorUnidad);
-apiRouter.get("/compras/:idUsuario", obtenerHistorialCompras);
+// Cada usuario ve solo sus compras (un admin puede ver las de cualquiera)
+apiRouter.get("/compras/:idUsuario", requireAuth, obtenerHistorialCompras);
 
 apiRouter.post("/webhooks/mercadopago", recibidorDeWebHookMP);
 
@@ -126,13 +124,13 @@ apiRouter.get(
 );
 apiRouter.get("/orders/:id/invoice", requireAuth, documentos.descargarFactura);
 
-//Notificaciones
-apiRouter.patch(
-  "/notificaciones/:idNotificacion/leida",
-  requireAuth,
-  marcarComoLeida,
-);
-apiRouter.get("/notificaciones/:idUsuario", requireAuth, obtenerNotificaciones);
+// Notificaciones (cada usuario solo ve y modifica las suyas)
+apiRouter.get("/notifications", requireAuth, notificaciones.listarNotificaciones);
+apiRouter.get("/notifications/unread-count", requireAuth, notificaciones.contarNotificacionesNoLeidas);
+// Tiempo real por SSE (EventSource con cookies de sesion)
+apiRouter.get("/notifications/stream", requireAuth, notificaciones.streamNotificaciones);
+apiRouter.patch("/notifications/read-all", requireAuth, notificaciones.marcarTodasComoLeidas);
+apiRouter.patch("/notifications/:id/read", requireAuth, notificaciones.marcarComoLeida);
 
 //Favoritos
 
@@ -211,5 +209,8 @@ adminRouter.patch("/servicios/:id", adminServicios.actualizarServicio);
 adminRouter.get("/usuarios", adminUsuarios.listarUsuarios);
 adminRouter.get("/usuarios/:id", adminUsuarios.obtenerUsuario);
 adminRouter.patch("/usuarios/:id/habilitado", adminUsuarios.cambiarHabilitado);
+
+// Novedades generales para todos los usuarios (o los indicados)
+adminRouter.post("/notifications", notificaciones.enviarNovedad);
 
 apiRouter.use("/admin", adminRouter);

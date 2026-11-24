@@ -21,6 +21,7 @@ import {
   listarSolicitudesQuerySchema,
   respuestaSchema,
 } from "../validations/servicioTecnico.validation";
+import { crearNotificacionEstadoSolicitud, crearNotificacionRespuestaSolicitud } from "../utils/notificaciones";
 
 // Todas estas rutas pasan por requireAuth + requireAdmin (ver routes/index.ts).
 
@@ -108,6 +109,9 @@ export async function responderSolicitud(req: Request, res: Response<SolicitudDe
     prisma.solicitudServicio.update({ where: { idSolicitud: id }, data: { actualizadoEn: new Date() } }),
   ]);
 
+  // Aviso al cliente de la respuesta (no corta la respuesta si falla)
+  await crearNotificacionRespuestaSolicitud(solicitud.idUsuario, id, mensaje);
+
   res.status(201).json(mapearDetalleSolicitud(await buscarSolicitud(id), true));
 }
 
@@ -138,6 +142,9 @@ export async function cambiarEstadoSolicitud(req: Request, res: Response<Solicit
       await tx.respuestaSolicitud.create({ data: { idSolicitud: id, idUsuario: idUsuarioDe(req), mensaje } });
     }
   });
+
+  // Aviso al cliente (no corta la respuesta si falla)
+  await crearNotificacionEstadoSolicitud(solicitud.idUsuario, id, estado);
 
   res.json(mapearDetalleSolicitud(await buscarSolicitud(id), true));
 }
