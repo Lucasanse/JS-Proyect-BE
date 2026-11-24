@@ -5,6 +5,7 @@ import { prisma } from "../utils/prisma";
 import { AppError } from "../utils/AppError";
 import type { Paginado, ProductoAdmin } from "../utils/catalogo.types";
 import { RUTA_PUBLICA_IMAGENES, borrarImagenLocal } from "../middlewares/subirImagen";
+import { notificarPresetsAfectados } from "../utils/notificaciones";
 import {
   estadoSchema,
   idParamSchema,
@@ -246,7 +247,12 @@ export async function actualizarProducto(req: Request, res: Response<ProductoAdm
     await liberarImagen(anterior.imagenUrl);
   }
 
-  res.json(mapearAdmin(await buscarProducto(id)));
+  // Aviso a los armados que lo tienen, solo cuando cambia (se queda sin stock o se desactiva)
+  const actual = await buscarProducto(id);
+  if (anterior.activo && !actual.activo) await notificarPresetsAfectados([id], "BAJA");
+  else if (actual.activo && anterior.stock > 0 && actual.stock <= 0) await notificarPresetsAfectados([id], "SIN_STOCK");
+
+  res.json(mapearAdmin(actual));
 }
 
 const mensajeConVentas = (nombre: string) =>
@@ -294,9 +300,11 @@ export async function eliminarProducto(req: Request, res: Response) {
 export async function cambiarEstadoProducto(req: Request, res: Response<ProductoAdmin>) {
   const { id } = idParamSchema.parse(req.params);
   const { activo } = estadoSchema.parse(req.body);
-  await buscarProducto(id);
+  const anterior = await buscarProducto(id);
 
   await prisma.producto.update({ where: { idProducto: id }, data: { activo } });
+  // Al desactivarlo, aviso a los usuarios que lo tienen en un armado guardado
+  if (anterior.activo && !activo) await notificarPresetsAfectados([id], "BAJA");
   res.json(mapearAdmin(await buscarProducto(id)));
 }
 
