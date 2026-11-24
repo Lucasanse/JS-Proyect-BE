@@ -1,6 +1,10 @@
 import type { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
-import type { FavoritoItem, FavoritoQuery, FavoritoAccionResponse } from "../utils/favoritos.types";
+import type {
+  FavoritoItem,
+  FavoritoQuery,
+  FavoritoAccionResponse,
+} from "../utils/favoritos.types";
 
 export const obtenerFavoritosPorId = async (
   req: Request<{ idUsuario: string }, unknown, unknown, { lang?: string }>,
@@ -16,11 +20,10 @@ export const obtenerFavoritosPorId = async (
 
   try {
     const favoritos = await prisma.favorito.findMany({
-      where: { idUsuario },
+      where: { idUsuario, producto: { activo: true } },
       orderBy: { fechaAgregado: "desc" },
       include: {
         producto: {
-          activo: true,
           include: {
             marca: true,
             categoria: true,
@@ -81,22 +84,83 @@ export const agregarFavorito = async (
 ): Promise<void> => {
   const idUsuario = Number(req.params.idUsuario);
   const idProducto = Number(req.params.idProducto);
-  const lang = (req.query.lang || "es").toLowerCase();
 
-  if (!idUsuario || !idProducto){
-    res.status(400).json({ error: "Sin datos para buscar" });
-    return
+  if (
+    isNaN(idUsuario) ||
+    idUsuario <= 0 ||
+    isNaN(idProducto) ||
+    idProducto <= 0
+  ) {
+    res.status(400).json({ error: "ID de usuario o producto inválido" });
+    return;
   }
 
   try {
-
     await prisma.favorito.upsert({
-    where: {
-idUsuario_idProducto: {
+      where: {
+        idUsuario_idProducto: {
           idUsuario,
           idProducto,
         },
-    }  
-    })
+      },
+      create: {
+        idUsuario,
+        idProducto,
+      },
+      update: {},
+    });
+
+    res.status(201).json({
+      mensaje: "Producto agregado a favoritos",
+      idProducto,
+      esFavorito: true,
+    });
+  } catch (error) {
+    console.error("Error al agregar favorito:", error);
+    res
+      .status(400)
+      .json({ error: "No se pudo agregar el producto a favoritos" });
+  }
+};
+export const eliminarFavorito = async (
+  req: Request<
+    { idUsuario: string; idProducto: string },
+    unknown,
+    unknown,
+    FavoritoQuery
+  >,
+  res: Response<FavoritoAccionResponse | { error: string }>,
+): Promise<void> => {
+  const idUsuario = Number(req.params.idUsuario);
+  const idProducto = Number(req.params.idProducto);
+
+  if (
+    isNaN(idUsuario) ||
+    idUsuario <= 0 ||
+    isNaN(idProducto) ||
+    idProducto <= 0
+  ) {
+    res.status(400).json({ error: "ID de usuario o producto inválido" });
+    return;
+  }
+
+  try {
+    await prisma.favorito.deleteMany({
+      where: {
+        idUsuario,
+        idProducto,
+      },
+    });
+
+    res.status(200).json({
+      mensaje: "Producto eliminado correctamente",
+      idProducto,
+      esFavorito: false,
+    });
+  } catch (error) {
+    console.error("Error al borrar favorito:", error);
+    res
+      .status(500)
+      .json({ error: "No se pudo borrar el producto a favoritos" });
   }
 };
