@@ -31,6 +31,7 @@ import {
   listarVentasAdmin,
   obtenerVentaPorIdAdmin,
 } from "../controllers/adminPedidos.controller";
+import { obtenerFavoritosPorId } from "../controllers/favoritos.controller";
 
 export const apiRouter = Router();
 
@@ -56,7 +57,11 @@ apiRouter.patch(
   carrito.modificarCantidad,
 );
 apiRouter.delete("/carrito/items/:idProducto", requireAuth, carrito.quitarItem);
-apiRouter.delete("/carrito/servicios/:idServicio", requireAuth, carrito.quitarServicio);
+apiRouter.delete(
+  "/carrito/servicios/:idServicio",
+  requireAuth,
+  carrito.quitarServicio,
+);
 apiRouter.delete("/carrito", requireAuth, carrito.vaciarCarrito);
 
 // Armador de PC: elegir y validar es publico; agregar al carrito y guardar requieren sesion
@@ -71,10 +76,25 @@ apiRouter.delete("/armador/presets/:id", requireAuth, armador.eliminarPreset);
 
 // Servicio tecnico del cliente (requiere sesion iniciada; cada uno ve solo las suyas)
 // Precios de servicio tecnico (publico): se abonan en el local, no por Mercado Pago
-apiRouter.get("/servicio-tecnico/precios", servicioTecnico.listarPreciosServicioTecnico);
-apiRouter.post("/servicio-tecnico", requireAuth, servicioTecnico.crearSolicitud);
-apiRouter.get("/servicio-tecnico", requireAuth, servicioTecnico.listarMisSolicitudes);
-apiRouter.get("/servicio-tecnico/:id", requireAuth, servicioTecnico.obtenerMiSolicitud);
+apiRouter.get(
+  "/servicio-tecnico/precios",
+  servicioTecnico.listarPreciosServicioTecnico,
+);
+apiRouter.post(
+  "/servicio-tecnico",
+  requireAuth,
+  servicioTecnico.crearSolicitud,
+);
+apiRouter.get(
+  "/servicio-tecnico",
+  requireAuth,
+  servicioTecnico.listarMisSolicitudes,
+);
+apiRouter.get(
+  "/servicio-tecnico/:id",
+  requireAuth,
+  servicioTecnico.obtenerMiSolicitud,
+);
 
 // Fotos desde el celular (QR del formulario de productos). Sin sesion: el token hace de permiso.
 apiRouter.get("/captura/:token", analisisIA.infoCaptura);
@@ -95,7 +115,11 @@ apiRouter.post("/webhooks/mercadopago", recibidorDeWebHookMP);
 // Presupuestos y facturas en PDF (cada usuario solo accede a los suyos)
 apiRouter.post("/quotes", requireAuth, documentos.generarPresupuesto);
 apiRouter.get("/quotes", requireAuth, documentos.listarPresupuestos);
-apiRouter.get("/quotes/:id/download", requireAuth, documentos.descargarPresupuesto);
+apiRouter.get(
+  "/quotes/:id/download",
+  requireAuth,
+  documentos.descargarPresupuesto,
+);
 apiRouter.get("/orders/:id/invoice", requireAuth, documentos.descargarFactura);
 
 //Notificaciones
@@ -105,6 +129,11 @@ apiRouter.patch(
   marcarComoLeida,
 );
 apiRouter.get("/notificaciones/:idUsuario", requireAuth, obtenerNotificaciones);
+
+//Favoritos
+
+//apiRouter.get("/notificaciones/:idUsuario", requireAuth, obtenerNotificaciones);
+apiRouter.get("/favoritos/:idUsuario", obtenerFavoritosPorId);
 
 // Administracion (solo rol ADMIN: sin sesion -> 401, otro rol -> 403)
 const adminRouter = Router();
@@ -150,8 +179,14 @@ adminRouter.delete("/captura/:token", analisisIA.cancelarCaptura);
 // Servicio tecnico: seguimiento, respuestas y cambios de estado
 adminRouter.get("/servicio-tecnico", adminServicioTecnico.listarSolicitudes);
 adminRouter.get("/servicio-tecnico/:id", adminServicioTecnico.obtenerSolicitud);
-adminRouter.post("/servicio-tecnico/:id/respuestas", adminServicioTecnico.responderSolicitud);
-adminRouter.patch("/servicio-tecnico/:id/estado", adminServicioTecnico.cambiarEstadoSolicitud);
+adminRouter.post(
+  "/servicio-tecnico/:id/respuestas",
+  adminServicioTecnico.responderSolicitud,
+);
+adminRouter.patch(
+  "/servicio-tecnico/:id/estado",
+  adminServicioTecnico.cambiarEstadoSolicitud,
+);
 
 // Servicios del armador (armado de PC, instalacion de Windows...): precio y activo
 adminRouter.get("/servicios", adminServicios.listarServiciosAdmin);
