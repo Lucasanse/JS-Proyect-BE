@@ -22,6 +22,10 @@ export const obtenerHistorialCompras = async (req: Request, res: Response) => {
         .json({ error: "El ID de usuario debe ser numérico" });
     }
 
+    if (idUsuario !== Number(req.usuario!.id) && req.usuario!.rol !== "ADMIN") {
+      return res.status(403).json({ error: "No podés ver las compras de otro usuario" });
+    }
+
     const ventas = await prisma.venta.findMany({
       where: {
         idUsuario,
