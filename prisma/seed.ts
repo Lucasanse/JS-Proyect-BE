@@ -1897,6 +1897,13 @@ const tiposNotificacion = [
     plantillaMensajeEN: "We replied to your request #{idSolicitud}: \"{respuesta}\"",
   },
   {
+    codigo: "SOLICITUD_CREADA",
+    plantillaTitulo: "Recibimos tu solicitud",
+    plantillaTituloEN: "We received your request",
+    plantillaMensaje: "Recibimos tu solicitud de servicio técnico #{idSolicitud}. Te avisaremos cuando avance.",
+    plantillaMensajeEN: "We received your service request #{idSolicitud}. We will let you know as it progresses.",
+  },
+  {
     codigo: "ADMIN_VENTA_NUEVA",
     plantillaTitulo: "Nueva compra",
     plantillaTituloEN: "New order",

@@ -222,6 +222,15 @@ export const crearNotificacionDocumento = (documento: { idDocumento: number; idU
     referencia: { tipo: "DOCUMENTO", id: documento.idDocumento },
   });
 
+// El usuario crea una solicitud de servicio tecnico
+export const crearNotificacionSolicitudCreada = (idUsuario: number, idSolicitud: number) =>
+  createNotification({
+    idUsuario,
+    codigo: "SOLICITUD_CREADA",
+    referencia: { tipo: "SOLICITUD", id: idSolicitud },
+    unaPorReferencia: true,
+  });
+
 // Cambio de estado de una solicitud de servicio tecnico
 export const crearNotificacionEstadoSolicitud = (idUsuario: number, idSolicitud: number, estado: string) =>
   createNotification({
