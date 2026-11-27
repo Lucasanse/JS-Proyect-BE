@@ -210,7 +210,7 @@ export async function obtenerProductoAdmin(req: Request, res: Response<ProductoA
   res.json(mapearAdmin(await buscarProducto(id)));
 }
 
-// POST /api/admin/productos
+// POST /api/admin/productoss
 export async function crearProducto(req: Request, res: Response<ProductoAdmin>) {
   const { traduccionEn, componente, moneda, ...resto } = productoSchema.parse(req.body);
   const datos = { ...resto, ...(await resolverPrecio(resto.precio, moneda)) };
